@@ -1,0 +1,6 @@
+{
+  "name": "SafeNet Security Solutions Ltd — Corporate Security Command Centre",
+  "description": "SafeNet Security Solutions Ltd provides premier corporate security, drone surveillance, CCTV monitoring, access control, and executive protection across Nigeria.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
