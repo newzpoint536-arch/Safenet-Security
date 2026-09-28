@@ -211,6 +211,58 @@ export const SafeNetAiAgent: React.FC = () => {
     window.speechSynthesis.speak(utterance);
   };
 
+  // Tactical intelligence response generator when remote API is unreachable (e.g., static hosting / offline)
+  const generateTacticalFallback = (query: string, context: typeof activeContext): string => {
+    const q = query.toLowerCase();
+    let domain = 'Corporate & Industrial Defense Architecture';
+    let recommendations = [
+      'Deploy biometric multi-factor access control and anti-tailgating speed turnstiles at facility entries.',
+      'Install 24/7 IP thermal CCTV cameras with automated perimeter boundary detection.',
+      'Station vetted, NSCDC Category-A certified armed and unarmed security guards with RFID patrol checkpoint logging.',
+      'Connect facility telemetry directly to the SafeNet Victoria Island 24/7 Central Command Desk.'
+    ];
+
+    if (q.includes('maritime') || currentPath.includes('maritime') || q.includes('vessel') || q.includes('port') || q.includes('sea') || q.includes('offshore')) {
+      domain = 'Offshore & Maritime Security Operations';
+      recommendations = [
+        'Conduct rigorous ISPS Code audits and certified Port Facility Security Assessments (PFSA).',
+        'Deploy armed escort patrol vessels with Nigerian Navy & NIMASA security liaison personnel.',
+        'Mount long-range acoustic deterrents (LRAD) and thermal radar surveillance for anti-boarding defense.',
+        'Station certified Ship Security Officers (SSO) on offshore platforms and anchorage transfer points.'
+      ];
+    } else if (q.includes('cctv') || q.includes('camera') || q.includes('monitor') || currentPath.includes('cctv')) {
+      domain = 'Surveillance & Central Command Monitoring';
+      recommendations = [
+        'Install high-definition IP thermal cameras linked to SafeNet 24/7 Central Command Centre.',
+        'Deploy AI video analytics including Automatic Number Plate Recognition (ANPR) and facial recognition.',
+        'Configure dual-path optical tripwires that alert motorized tactical backup units in under 45 seconds.'
+      ];
+    } else if (q.includes('drone') || q.includes('aerial') || currentPath.includes('drone')) {
+      domain = 'Drone Aerial Surveillance & Reconnaissance';
+      recommendations = [
+        'Execute autonomous scheduled waypoint sweeps with FLIR thermal night-vision optical payloads.',
+        'Provide live encrypted video downlinks to client security control desks and rapid response squads.',
+        'Conduct rapid perimeter alarm verifications across sprawling industrial tank farms and pipeline rights-of-way.'
+      ];
+    } else if (q.includes('vip') || q.includes('escort') || q.includes('bodyguard') || q.includes('armored') || currentPath.includes('vip')) {
+      domain = 'VIP Close Protection & Convoy Logistics';
+      recommendations = [
+        'Assign Close Protection Officers (CPOs) trained to British/UK security intelligence standards.',
+        'Deploy certified B6/B7 ballistic armored SUVs with run-flat systems and satellite tracking.',
+        'Provide VIP air-to-ground tarmac protocol transfers at Lagos (MMIA) and Abuja (NAIA) airports.'
+      ];
+    } else if (q.includes('pipeline') || q.includes('oil') || currentPath.includes('pipeline')) {
+      domain = 'Pipeline & Energy Infrastructure Security';
+      recommendations = [
+        'Integrate distributed fiber-optic acoustic sensing (DAS) along pipeline right-of-ways.',
+        'Deploy long-range drone patrols combined with riverine tactical intercept boats in the Niger Delta.',
+        'Establish community intelligence liaison networks to prevent bunkering and illegal hot-tapping.'
+      ];
+    }
+
+    return `### SafeNet Sentinel Advisory: ${domain}\n\n**Operational Brief for "${query}":**\nSafeNet Command telemetry has logged your inquiry. Our tactical security architects recommend the following multi-layered protocols:\n\n${recommendations.map(r => `* ${r}`).join('\n')}\n\n***\n\n### Recommended Next Actions:\n* **Book Physical Security Survey:** Contact our engineering team for an on-site facility vulnerability assessment.\n* **24/7 Command Hotline:** Call **+234 813 129 6054** or connect directly via WhatsApp for rapid guard mobilization.`;
+  };
+
   // Send message to server with rich current page context
   const sendMessage = async (userText: string) => {
     const trimmed = userText.trim();
@@ -272,6 +324,23 @@ export const SafeNetAiAgent: React.FC = () => {
       });
 
       if (!res.ok) {
+        if (res.status === 404) {
+          // If remote API returns 404 (e.g., static hosting / missing serverless routing), dispatch tactical intelligence
+          const fallbackReply = generateTacticalFallback(trimmed, activeContext);
+          const assistantMsg: ChatMessage = {
+            id: `assistant-${Date.now()}`,
+            role: 'assistant',
+            content: fallbackReply,
+            timestamp: getTimestamp(),
+            contextPage: currentPath
+          };
+          setMessages(prev => [...prev, assistantMsg]);
+          if (speechEnabled) {
+            speakText(fallbackReply);
+          }
+          return;
+        }
+
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || `Server responded with status ${res.status}`);
       }
