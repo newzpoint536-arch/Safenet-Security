@@ -5,6 +5,7 @@ import { ServicesMatrix } from '../components/home/ServicesMatrix';
 import { OperationalProcess } from '../components/home/OperationalProcess';
 import { WhyChooseUs } from '../components/home/WhyChooseUs';
 import { InteractiveAssessmentTeaser } from '../components/home/InteractiveAssessmentTeaser';
+import { AiSentinelSection } from '../components/home/AiSentinelSection';
 import { TestimonialsSection } from '../components/home/TestimonialsSection';
 import { LatestBlogSection } from '../components/home/LatestBlogSection';
 
@@ -16,6 +17,7 @@ export const HomePage: React.FC = () => {
       <ServicesMatrix />
       <OperationalProcess />
       <WhyChooseUs />
+      <AiSentinelSection />
       <InteractiveAssessmentTeaser />
       <TestimonialsSection />
       <LatestBlogSection />

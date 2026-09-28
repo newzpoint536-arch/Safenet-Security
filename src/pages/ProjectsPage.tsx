@@ -3,8 +3,18 @@ import { useApp } from '../context/AppContext';
 import { ShieldCheck, MapPin, Calendar, CheckCircle2, ArrowRight, Layers } from 'lucide-react';
 
 export const ProjectsPage: React.FC = () => {
-  const { projects, caseStudies, navigate } = useApp();
-  const [activeTab, setActiveTab] = useState<'projects' | 'case-studies'>('projects');
+  const { currentPath, projects, caseStudies, navigate } = useApp();
+  const [activeTab, setActiveTab] = useState<'projects' | 'case-studies'>(() =>
+    currentPath.includes('case-studies') ? 'case-studies' : 'projects'
+  );
+
+  React.useEffect(() => {
+    if (currentPath.includes('case-studies')) {
+      setActiveTab('case-studies');
+    } else if (currentPath.includes('projects')) {
+      setActiveTab('projects');
+    }
+  }, [currentPath]);
 
   return (
     <div className="py-12 bg-slate-950 text-slate-100 space-y-16">

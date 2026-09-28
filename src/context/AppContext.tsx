@@ -89,6 +89,13 @@ interface AppContextType {
   // Toast notifications
   toastMessage: string | null;
   showToast: (msg: string) => void;
+
+  // AI Security Agent
+  isAiChatOpen: boolean;
+  setIsAiChatOpen: (open: boolean) => void;
+  aiChatInitialPrompt: string | null;
+  openAiChatWithPrompt: (prompt: string) => void;
+  clearAiChatInitialPrompt: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -167,6 +174,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // AI Security Agent state
+  const [isAiChatOpen, setIsAiChatOpen] = useState<boolean>(false);
+  const [aiChatInitialPrompt, setAiChatInitialPrompt] = useState<string | null>(null);
+
+  const openAiChatWithPrompt = (prompt: string) => {
+    setAiChatInitialPrompt(prompt);
+    setIsAiChatOpen(true);
+  };
+
+  const clearAiChatInitialPrompt = () => {
+    setAiChatInitialPrompt(null);
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -497,7 +517,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         auditLogs,
         addAuditLog,
         toastMessage,
-        showToast
+        showToast,
+        isAiChatOpen,
+        setIsAiChatOpen,
+        aiChatInitialPrompt,
+        openAiChatWithPrompt,
+        clearAiChatInitialPrompt
       }}
     >
       {children}

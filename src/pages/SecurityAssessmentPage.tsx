@@ -11,11 +11,13 @@ import {
   Eye, 
   Lock, 
   Users, 
-  FileText 
+  FileText,
+  Bot,
+  Sparkles
 } from 'lucide-react';
 
 export const SecurityAssessmentPage: React.FC = () => {
-  const { addSecurityAssessment, navigate } = useApp();
+  const { addSecurityAssessment, navigate, openAiChatWithPrompt } = useApp();
 
   const [step, setStep] = useState(1);
 
@@ -550,12 +552,32 @@ export const SecurityAssessmentPage: React.FC = () => {
                 ← Retake Diagnostic
               </button>
 
-              <button
-                onClick={() => navigate('/request-quote')}
-                className="w-full sm:w-auto px-6 py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs sm:text-sm rounded transition-all shadow-md"
-              >
-                Request Priority Site Survey & Quote
-              </button>
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const prompt = `I just conducted a facility vulnerability diagnostic on SafeNet:
+- Facility: ${propertyType} (${industry}) located in ${location}
+- Vulnerability Score: ${calculatedScore}/100 (${riskRating})
+- Identified Gaps: ${identifiedGaps.join(', ')}
+- Recommended Systems: ${recommendedServices.join(', ')}
+Could you formulate a detailed tactical deployment roadmap, guard shift structure, and prioritized hardening recommendations for my facility?`;
+                    openAiChatWithPrompt(prompt);
+                  }}
+                  className="w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-amber-400/40 text-amber-300 font-bold text-xs sm:text-sm rounded transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                >
+                  <Bot className="w-4 h-4 text-amber-400" />
+                  <span>Audit With Sentinel AI</span>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                </button>
+
+                <button
+                  onClick={() => navigate('/request-quote')}
+                  className="w-full sm:w-auto px-6 py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs sm:text-sm rounded transition-all shadow-md cursor-pointer"
+                >
+                  Request Priority Site Survey & Quote
+                </button>
+              </div>
             </div>
 
           </div>

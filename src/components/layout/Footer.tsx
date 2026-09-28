@@ -186,6 +186,11 @@ export const Footer: React.FC = () => {
                 </button>
               </li>
               <li>
+                <button onClick={() => navigate('/faq')} className="hover:text-amber-400 transition-colors">
+                  Frequently Asked Questions (FAQ)
+                </button>
+              </li>
+              <li>
                 <button onClick={() => navigate('/careers')} className="hover:text-amber-400 transition-colors">
                   Careers & Recruitment
                 </button>

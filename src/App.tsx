@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { FloatingWhatsApp } from './components/layout/FloatingWhatsApp';
+import { SafeNetAiAgent } from './components/chat/SafeNetAiAgent';
 
 import { HomePage } from './pages/HomePage';
 import { AboutPage } from './pages/AboutPage';
@@ -18,6 +19,7 @@ import { BlogPostDetailPage } from './pages/BlogPostDetailPage';
 import { CareersPage } from './pages/CareersPage';
 import { LicencesCompliancePage } from './pages/LicencesCompliancePage';
 import { ContactPage } from './pages/ContactPage';
+import { FaqPage } from './pages/FaqPage';
 import { AdminCommandCentre } from './pages/AdminCommandCentre';
 
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
@@ -104,6 +106,11 @@ const RouterContent: React.FC = () => {
       return <ContactPage />;
     }
 
+    // Frequently Asked Questions
+    if (cleanPath === '/faq' || cleanPath === '/faqs') {
+      return <FaqPage />;
+    }
+
     // Admin Command Centre
     if (cleanPath === '/admin' || cleanPath === '/cms') {
       return <AdminCommandCentre />;
@@ -156,6 +163,9 @@ const RouterContent: React.FC = () => {
 
       {/* Floating WhatsApp Quick Connect Widget */}
       <FloatingWhatsApp />
+
+      {/* SafeNet Sentinel AI Security Advisor Agent */}
+      <SafeNetAiAgent />
 
       {/* Global Toast Notification */}
       {toastMessage && (
