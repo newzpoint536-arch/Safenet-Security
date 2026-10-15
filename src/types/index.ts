@@ -264,3 +264,36 @@ export interface AuditLog {
   details: string;
   ip: string;
 }
+
+export type AdminRole = 'super_admin' | 'operations_officer' | 'content_editor' | 'auditor';
+
+export interface SystemNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'warning' | 'info' | 'urgent';
+  timestamp: string;
+  link?: string;
+}
+
+export interface ProposalBlueprint {
+  referenceCode: string;
+  generatedDate: string;
+  client: {
+    name: string;
+    company: string;
+    facilityType: string;
+    location: string;
+  };
+  securityIndex: {
+    score: number;
+    rating: string;
+  };
+  recommendedTierArchitecture: {
+    tier: string;
+    components: string[];
+  }[];
+  recommendedServices: string[];
+  accreditations: string[];
+  operationsHQ: string;
+}

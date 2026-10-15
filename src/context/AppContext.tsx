@@ -16,7 +16,10 @@ import {
   JobApplication,
   Testimonial,
   AuditLog,
-  SocialPlatform
+  SocialPlatform,
+  AdminRole,
+  SystemNotification,
+  ProposalBlueprint
 } from '../types';
 import {
   initialSiteSettings,
@@ -89,6 +92,25 @@ interface AppContextType {
   // Toast notifications
   toastMessage: string | null;
   showToast: (msg: string) => void;
+
+  // Role-Based Access Control
+  currentRole: AdminRole;
+  setCurrentRole: (role: AdminRole) => void;
+
+  // System Notifications
+  notifications: SystemNotification[];
+  refreshNotifications: () => Promise<void>;
+
+  // Formal Proposal Generation
+  generateProposalBlueprint: (data: {
+    clientName?: string;
+    company?: string;
+    facilityType?: string;
+    location?: string;
+    score?: number;
+    riskRating?: string;
+    services?: string[];
+  }) => Promise<ProposalBlueprint>;
 
   // AI Security Agent
   isAiChatOpen: boolean;
@@ -195,42 +217,181 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 4500);
   };
 
-  // Sync to LocalStorage
+  // Role-Based Access Control State
+  const [currentRole, setCurrentRole] = useState<AdminRole>('super_admin');
+
+  // System Notifications State
+  const [notifications, setNotifications] = useState<SystemNotification[]>([]);
+
+  const refreshNotifications = async () => {
+    try {
+      const res = await fetch('/api/notifications');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.notifications)) {
+          setNotifications(data.notifications);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to refresh notifications:', err);
+    }
+  };
+
+  // Helper to sync state to server persistent file store
+  const syncToServer = async () => {
+    try {
+      await fetch('/api/db/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          siteSettings,
+          blogPosts,
+          socialAccounts,
+          socialPublishJobs,
+          leads,
+          securityAssessments,
+          jobApplications,
+          testimonials,
+          auditLogs
+        })
+      });
+    } catch (err) {
+      console.warn('Background sync to server store paused:', err);
+    }
+  };
+
+  // On initial mount: load from server persistent store
+  useEffect(() => {
+    fetch('/api/db/state')
+      .then(res => res.json())
+      .then(res => {
+        if (res && res.seeded && res.data) {
+          const d = res.data;
+          if (d.siteSettings) setSiteSettings(d.siteSettings);
+          if (Array.isArray(d.blogPosts) && d.blogPosts.length > 0) setBlogPosts(d.blogPosts);
+          if (Array.isArray(d.socialAccounts) && d.socialAccounts.length > 0) setSocialAccounts(d.socialAccounts);
+          if (Array.isArray(d.socialPublishJobs)) setSocialPublishJobs(d.socialPublishJobs);
+          if (Array.isArray(d.leads) && d.leads.length > 0) setLeads(d.leads);
+          if (Array.isArray(d.securityAssessments)) setSecurityAssessments(d.securityAssessments);
+          if (Array.isArray(d.jobApplications)) setJobApplications(d.jobApplications);
+          if (Array.isArray(d.testimonials)) setTestimonials(d.testimonials);
+          if (Array.isArray(d.auditLogs)) setAuditLogs(d.auditLogs);
+        } else {
+          // Initialize server store with baseline
+          syncToServer();
+        }
+      })
+      .catch(err => console.warn('Server storage connection:', err));
+
+    refreshNotifications();
+  }, []);
+
+  // Sync to LocalStorage & Server Store
   useEffect(() => {
     localStorage.setItem('safenet_site_settings', JSON.stringify(siteSettings));
+    syncToServer();
   }, [siteSettings]);
 
   useEffect(() => {
     localStorage.setItem('safenet_blog_posts', JSON.stringify(blogPosts));
+    syncToServer();
   }, [blogPosts]);
 
   useEffect(() => {
     localStorage.setItem('safenet_social_accounts', JSON.stringify(socialAccounts));
+    syncToServer();
   }, [socialAccounts]);
 
   useEffect(() => {
     localStorage.setItem('safenet_social_jobs', JSON.stringify(socialPublishJobs));
+    syncToServer();
   }, [socialPublishJobs]);
 
   useEffect(() => {
     localStorage.setItem('safenet_leads', JSON.stringify(leads));
+    syncToServer();
+    refreshNotifications();
   }, [leads]);
 
   useEffect(() => {
     localStorage.setItem('safenet_assessments', JSON.stringify(securityAssessments));
+    syncToServer();
+    refreshNotifications();
   }, [securityAssessments]);
 
   useEffect(() => {
     localStorage.setItem('safenet_applications', JSON.stringify(jobApplications));
+    syncToServer();
+    refreshNotifications();
   }, [jobApplications]);
 
   useEffect(() => {
     localStorage.setItem('safenet_testimonials', JSON.stringify(testimonials));
+    syncToServer();
   }, [testimonials]);
 
   useEffect(() => {
     localStorage.setItem('safenet_audit_logs', JSON.stringify(auditLogs));
+    syncToServer();
   }, [auditLogs]);
+
+  const generateProposalBlueprint = async (data: {
+    clientName?: string;
+    company?: string;
+    facilityType?: string;
+    location?: string;
+    score?: number;
+    riskRating?: string;
+    services?: string[];
+  }): Promise<ProposalBlueprint> => {
+    try {
+      const res = await fetch('/api/proposals/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        const body = await res.json();
+        if (body.proposal) return body.proposal;
+      }
+    } catch (err) {
+      console.warn('Backend proposal generation offline, using client fallback:', err);
+    }
+
+    // Client fallback blueprint
+    const refCode = `SFN-PROP-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    return {
+      referenceCode: refCode,
+      generatedDate: new Date().toISOString(),
+      client: {
+        name: data.clientName || 'Corporate Client',
+        company: data.company || 'Enterprise Facility',
+        facilityType: data.facilityType || 'Commercial Complex',
+        location: data.location || 'Lagos, Nigeria'
+      },
+      securityIndex: {
+        score: data.score ?? 65,
+        rating: data.riskRating || 'Moderate Risk'
+      },
+      recommendedTierArchitecture: [
+        {
+          tier: 'Tier 1: Perimeter Detection & Aerial Reconnaissance',
+          components: ['Thermal IP CCTV with optical tripwires', 'Scheduled autonomous drone patrols', 'Perimeter vibration beam sensors']
+        },
+        {
+          tier: 'Tier 2: Access & Identity Verification',
+          components: ['Touchless facial recognition speed gates', 'Automated ANPR vehicle license blockers', 'Visitor digital badge issuance']
+        },
+        {
+          tier: 'Tier 3: Manned Tactical Deterrence & Dispatch',
+          components: ['Vetted, NSCDC-certified security officers', '24/7 RFID guard tour attendance wanding', 'Armed mobile supervisor backup in under 60 seconds']
+        }
+      ],
+      recommendedServices: data.services || ['CCTV Installation & Monitoring', 'Armed & Unarmed Security Guards'],
+      accreditations: ['NSCDC Category A Licensed', 'ISO 9001:2015 Certified', 'ISO 18788 (Security Operations Management)', 'UK Operational Standards'],
+      operationsHQ: 'Plot 14 Commercial Avenue, Victoria Island, Lagos'
+    };
+  };
 
   const addAuditLog = (action: string, target: string, details: string) => {
     const newLog: AuditLog = {
@@ -522,7 +683,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsAiChatOpen,
         aiChatInitialPrompt,
         openAiChatWithPrompt,
-        clearAiChatInitialPrompt
+        clearAiChatInitialPrompt,
+        currentRole,
+        setCurrentRole,
+        notifications,
+        refreshNotifications,
+        generateProposalBlueprint
       }}
     >
       {children}

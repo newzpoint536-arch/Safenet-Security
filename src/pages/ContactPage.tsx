@@ -141,6 +141,54 @@ export const ContactPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Official Social Media Channels */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+              <div className="text-xs font-semibold text-white uppercase tracking-wider">
+                Official Company Channels
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Follow verified operational updates and security briefings across our official networks:
+              </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <a
+                  href={siteSettings.socialLinks.linkedin}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-amber-400/40 rounded text-xs text-slate-300 hover:text-amber-400 transition-colors flex items-center gap-1.5"
+                >
+                  <span className="font-bold font-mono">in</span>
+                  <span>LinkedIn</span>
+                </a>
+                <a
+                  href={siteSettings.socialLinks.facebook}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-amber-400/40 rounded text-xs text-slate-300 hover:text-amber-400 transition-colors flex items-center gap-1.5"
+                >
+                  <span className="font-bold font-mono">fb</span>
+                  <span>Facebook</span>
+                </a>
+                <a
+                  href={siteSettings.socialLinks.x}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-amber-400/40 rounded text-xs text-slate-300 hover:text-amber-400 transition-colors flex items-center gap-1.5"
+                >
+                  <span className="font-bold font-mono">X</span>
+                  <span>X (Twitter)</span>
+                </a>
+                <a
+                  href={siteSettings.socialLinks.instagram}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-amber-400/40 rounded text-xs text-slate-300 hover:text-amber-400 transition-colors flex items-center gap-1.5"
+                >
+                  <span className="font-bold font-mono">ig</span>
+                  <span>Instagram</span>
+                </a>
+              </div>
+            </div>
+
           </div>
 
           {/* Right Column: Contact Form */}

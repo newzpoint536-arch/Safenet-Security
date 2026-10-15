@@ -13,13 +13,19 @@ import {
   Users, 
   FileText,
   Bot,
-  Sparkles
+  Sparkles,
+  Printer,
+  FileCheck2
 } from 'lucide-react';
+import { SecurityProposalModal } from '../components/proposals/SecurityProposalModal';
+import { ProposalBlueprint } from '../types';
 
 export const SecurityAssessmentPage: React.FC = () => {
-  const { addSecurityAssessment, navigate, openAiChatWithPrompt } = useApp();
+  const { addSecurityAssessment, navigate, openAiChatWithPrompt, generateProposalBlueprint } = useApp();
 
   const [step, setStep] = useState(1);
+  const [activeProposal, setActiveProposal] = useState<ProposalBlueprint | null>(null);
+  const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
 
   // Form Fields
   const [propertyType, setPropertyType] = useState('Commercial Multi-Storey Tower');
@@ -555,6 +561,34 @@ export const SecurityAssessmentPage: React.FC = () => {
               <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                 <button
                   type="button"
+                  onClick={async () => {
+                    setIsGeneratingProposal(true);
+                    try {
+                      const prop = await generateProposalBlueprint({
+                        clientName: clientName || 'Corporate Client',
+                        company: clientCompany || propertyType,
+                        facilityType: propertyType,
+                        location: location,
+                        score: calculatedScore,
+                        riskRating: riskRating,
+                        services: recommendedServices
+                      });
+                      setActiveProposal(prop);
+                    } catch (err) {
+                      console.error('Proposal error:', err);
+                    } finally {
+                      setIsGeneratingProposal(false);
+                    }
+                  }}
+                  disabled={isGeneratingProposal}
+                  className="w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs sm:text-sm rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                >
+                  <Printer className="w-4 h-4 text-amber-400" />
+                  <span>{isGeneratingProposal ? 'Generating...' : 'Print / Save Proposal PDF'}</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => {
                     const prompt = `I just conducted a facility vulnerability diagnostic on SafeNet:
 - Facility: ${propertyType} (${industry}) located in ${location}
@@ -564,7 +598,7 @@ export const SecurityAssessmentPage: React.FC = () => {
 Could you formulate a detailed tactical deployment roadmap, guard shift structure, and prioritized hardening recommendations for my facility?`;
                     openAiChatWithPrompt(prompt);
                   }}
-                  className="w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-amber-400/40 text-amber-300 font-bold text-xs sm:text-sm rounded transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  className="w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-amber-400/40 text-amber-300 font-bold text-xs sm:text-sm rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                 >
                   <Bot className="w-4 h-4 text-amber-400" />
                   <span>Audit With Sentinel AI</span>
@@ -573,7 +607,7 @@ Could you formulate a detailed tactical deployment roadmap, guard shift structur
 
                 <button
                   onClick={() => navigate('/request-quote')}
-                  className="w-full sm:w-auto px-6 py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs sm:text-sm rounded transition-all shadow-md cursor-pointer"
+                  className="w-full sm:w-auto px-6 py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs sm:text-sm rounded-lg transition-all shadow-md cursor-pointer"
                 >
                   Request Priority Site Survey & Quote
                 </button>
@@ -583,6 +617,14 @@ Could you formulate a detailed tactical deployment roadmap, guard shift structur
           </div>
         )}
       </div>
+
+      {/* Branded Security Proposal Document Modal */}
+      {activeProposal && (
+        <SecurityProposalModal
+          proposal={activeProposal}
+          onClose={() => setActiveProposal(null)}
+        />
+      )}
 
     </div>
   );

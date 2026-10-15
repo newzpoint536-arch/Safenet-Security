@@ -21,6 +21,8 @@ import { LicencesCompliancePage } from './pages/LicencesCompliancePage';
 import { ContactPage } from './pages/ContactPage';
 import { FaqPage } from './pages/FaqPage';
 import { AdminCommandCentre } from './pages/AdminCommandCentre';
+import { ClientVaultPage } from './pages/ClientVaultPage';
+import { OperationsMapPage } from './pages/OperationsMapPage';
 
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
 
@@ -80,7 +82,19 @@ const RouterContent: React.FC = () => {
       return <RequestQuotePage />;
     }
 
-    // Blog
+    // Blog Category Filter: /blog/category/[category]
+    if (cleanPath.startsWith('/blog/category/')) {
+      const cat = decodeURIComponent(cleanPath.replace('/blog/category/', '')).replace(/-/g, ' ');
+      return <BlogPage initialCategory={cat} />;
+    }
+
+    // Blog Tag Filter: /blog/tag/[tag]
+    if (cleanPath.startsWith('/blog/tag/')) {
+      const tag = decodeURIComponent(cleanPath.replace('/blog/tag/', '')).replace(/-/g, ' ');
+      return <BlogPage initialTag={tag} />;
+    }
+
+    // Blog Main: /blog
     if (cleanPath === '/blog') {
       return <BlogPage />;
     }
@@ -89,6 +103,16 @@ const RouterContent: React.FC = () => {
     if (cleanPath.startsWith('/blog/')) {
       const slug = cleanPath.replace('/blog/', '');
       return <BlogPostDetailPage slug={slug} />;
+    }
+
+    // Retained Client Vault Portal: /client-vault
+    if (cleanPath === '/client-vault' || cleanPath === '/vault') {
+      return <ClientVaultPage />;
+    }
+
+    // Geospatial Operations Sector Map: /operations-map
+    if (cleanPath === '/operations-map' || cleanPath === '/map' || cleanPath === '/sectors') {
+      return <OperationsMapPage />;
     }
 
     // Careers

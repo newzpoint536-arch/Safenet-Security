@@ -23,9 +23,14 @@ import {
   Eye,
   Lock,
   ChevronRight,
-  Filter
+  Filter,
+  Bell,
+  Printer,
+  FileCheck2,
+  ShieldAlert
 } from 'lucide-react';
-import { BlogPost, LeadStatus, SocialPlatform } from '../types';
+import { BlogPost, LeadStatus, SocialPlatform, AdminRole, ProposalBlueprint } from '../types';
+import { SecurityProposalModal } from '../components/proposals/SecurityProposalModal';
 
 export const AdminCommandCentre: React.FC = () => {
   const {
@@ -48,10 +53,16 @@ export const AdminCommandCentre: React.FC = () => {
     testimonials,
     toggleTestimonialPublished,
     auditLogs,
-    showToast
+    showToast,
+    currentRole,
+    setCurrentRole,
+    notifications,
+    generateProposalBlueprint
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'leads' | 'blog' | 'social' | 'assessments' | 'careers' | 'settings' | 'audit'>('overview');
+  const [activeProposalModal, setActiveProposalModal] = useState<ProposalBlueprint | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // New Blog Post Form State
   const [newBlogTitle, setNewBlogTitle] = useState('');
@@ -162,11 +173,80 @@ export const AdminCommandCentre: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-400">Social Automation Mode:</span>
-            <span className={`font-mono font-bold ${siteSettings.socialPublishingMode === 'auto_publish' ? 'text-emerald-400' : 'text-amber-400'}`}>
-              {siteSettings.socialPublishingMode === 'auto_publish' ? 'AUTO-PUBLISH' : 'MANUAL APPROVAL'}
-            </span>
+          <div className="flex flex-wrap items-center gap-4 text-xs">
+            {/* Role Switcher */}
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400">Role:</span>
+              <select
+                value={currentRole}
+                onChange={(e) => setCurrentRole(e.target.value as AdminRole)}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-amber-400 font-bold focus:outline-none"
+              >
+                <option value="super_admin">Super Administrator</option>
+                <option value="operations_officer">Operations Officer</option>
+                <option value="content_editor">Content Editor</option>
+                <option value="auditor">Auditor (Read-Only)</option>
+              </select>
+            </div>
+
+            {/* Notifications Popover Trigger */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-amber-400/50 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                title="System Notifications"
+              >
+                <Bell className="w-4 h-4 text-amber-400" />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center animate-pulse">
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Notifications Dropdown Panel */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-4 z-50 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <div className="text-xs font-bold text-white uppercase tracking-wider">
+                      Operations Alerts ({notifications.length})
+                    </div>
+                    <button
+                      onClick={() => setShowNotifications(false)}
+                      className="text-slate-400 hover:text-white text-xs"
+                    >
+                      &times;
+                    </button>
+                  </div>
+
+                  {notifications.length === 0 ? (
+                    <div className="text-center py-4 text-slate-400 text-xs">
+                      All operational indicators within normal tolerances.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {notifications.map(notif => (
+                        <div key={notif.id} className="p-3 bg-slate-950 border border-slate-800/80 rounded-lg space-y-1 text-xs">
+                          <div className="flex items-center justify-between font-bold">
+                            <span className={notif.type === 'urgent' ? 'text-red-400' : 'text-amber-400'}>
+                              {notif.title}
+                            </span>
+                          </div>
+                          <p className="text-slate-300 text-[11px] leading-relaxed">{notif.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-800">
+              <span className="text-slate-400">Social Mode:</span>
+              <span className={`font-mono font-bold ${siteSettings.socialPublishingMode === 'auto_publish' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {siteSettings.socialPublishingMode === 'auto_publish' ? 'AUTO-PUBLISH' : 'MANUAL'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -404,12 +484,33 @@ export const AdminCommandCentre: React.FC = () => {
                             </select>
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setSelectedLeadId(lead.id); }}
-                              className="text-amber-400 hover:underline font-semibold"
-                            >
-                              Details
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  const prop = await generateProposalBlueprint({
+                                    clientName: lead.fullName,
+                                    company: lead.company || lead.propertyType,
+                                    facilityType: lead.propertyType,
+                                    location: lead.location,
+                                    score: 74,
+                                    riskRating: 'High Risk',
+                                    services: [lead.serviceRequired]
+                                  });
+                                  setActiveProposalModal(prop);
+                                }}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-white transition-colors cursor-pointer"
+                                title="Generate Branded Proposal PDF"
+                              >
+                                <Printer className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setSelectedLeadId(lead.id); }}
+                                className="text-amber-400 hover:underline font-semibold"
+                              >
+                                Details
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -873,9 +974,29 @@ export const AdminCommandCentre: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
                       <div>Contact: {sub.clientPhone} · {sub.clientEmail}</div>
-                      <span className="font-mono text-[11px]">{new Date(sub.createdAt).toLocaleDateString()}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-[11px]">{new Date(sub.createdAt).toLocaleDateString()}</span>
+                        <button
+                          onClick={async () => {
+                            const prop = await generateProposalBlueprint({
+                              clientName: sub.clientName,
+                              company: sub.clientCompany || sub.propertyType,
+                              facilityType: sub.propertyType,
+                              location: sub.location,
+                              score: sub.calculatedScore,
+                              riskRating: sub.riskRating,
+                              services: sub.recommendedServices
+                            });
+                            setActiveProposalModal(prop);
+                          }}
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-white border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Generate Proposal PDF</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))

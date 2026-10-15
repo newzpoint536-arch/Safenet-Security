@@ -335,26 +335,42 @@ export const Header: React.FC = () => {
             {resourcesDropdown && (
               <div 
                 onMouseLeave={() => setResourcesDropdown(false)}
-                className="absolute left-1/2 -translate-x-1/2 mt-1 w-60 bg-slate-900 border border-slate-700/80 rounded-lg shadow-xl p-3 space-y-1 z-50"
+                className="absolute left-1/2 -translate-x-1/2 mt-1 w-64 bg-slate-900 border border-slate-700/80 rounded-lg shadow-xl p-3 space-y-1 z-50"
               >
                 <button onClick={() => handleNav('/blog')} className="text-left w-full px-3 py-2 text-xs rounded hover:bg-slate-800 text-white hover:text-amber-400 transition-colors">
-                  Security Insights & Blog
+                  <div className="font-semibold">Security Intelligence Blog</div>
+                  <div className="text-[10px] text-slate-400">Briefings, threat vectors & tech</div>
+                </button>
+                <button onClick={() => handleNav('/operations-map')} className="text-left w-full px-3 py-2 text-xs rounded hover:bg-slate-800 text-white hover:text-amber-400 transition-colors">
+                  <div className="font-semibold">Operations Sector Map</div>
+                  <div className="text-[10px] text-slate-400">Lagos, Abuja & Delta deployment grid</div>
+                </button>
+                <button onClick={() => handleNav('/client-vault')} className="text-left w-full px-3 py-2 text-xs rounded hover:bg-slate-800 text-white hover:text-amber-400 transition-colors">
+                  <div className="font-semibold">Retained Client Vault</div>
+                  <div className="text-[10px] text-slate-400">Guard rosters, DOB logs & telemetry</div>
                 </button>
                 <button onClick={() => handleNav('/security-assessment')} className="text-left w-full px-3 py-2 text-xs rounded hover:bg-slate-800 text-white hover:text-amber-400 transition-colors">
-                  Interactive Security Assessment
+                  <div className="font-semibold text-amber-400">Risk Assessment Diagnostic</div>
+                  <div className="text-[10px] text-slate-400">Free 3-tier facility vulnerability score</div>
+                </button>
+                <button onClick={() => handleNav('/licences-compliance')} className="text-left w-full px-3 py-2 text-xs rounded hover:bg-slate-800 text-white hover:text-amber-400 transition-colors">
+                  <div className="font-semibold">Licences & Compliance</div>
+                  <div className="text-[10px] text-slate-400">NSCDC Category A & ISO standards</div>
                 </button>
                 <button onClick={() => handleNav('/faq')} className="text-left w-full px-3 py-2 text-xs rounded hover:bg-slate-800 text-white hover:text-amber-400 transition-colors">
-                  Frequently Asked Questions (FAQ)
-                </button>
-                <button onClick={() => handleNav('/careers')} className="text-left w-full px-3 py-2 text-xs rounded hover:bg-slate-800 text-white hover:text-amber-400 transition-colors">
-                  Careers & Recruitment
-                </button>
-                <button onClick={() => handleNav('/contact')} className="text-left w-full px-3 py-2 text-xs rounded hover:bg-slate-800 text-white hover:text-amber-400 transition-colors">
-                  Contact SafeNet
+                  <div className="font-semibold">Frequently Asked Questions</div>
+                  <div className="text-[10px] text-slate-400">Operational questions & SOPs</div>
                 </button>
               </div>
             )}
           </div>
+
+          <button 
+            onClick={() => handleNav('/projects')}
+            className={`transition-colors py-2 ${isActive('/projects') ? 'text-amber-400 font-semibold' : 'hover:text-white'}`}
+          >
+            Projects
+          </button>
 
           <button 
             onClick={() => handleNav('/contact')}
@@ -493,14 +509,28 @@ export const Header: React.FC = () => {
             <button onClick={() => handleNav('/about')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white">
               About SafeNet
             </button>
+            <button onClick={() => handleNav('/projects')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white">
+              Projects & Case Studies
+            </button>
+            <button onClick={() => handleNav('/operations-map')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white flex items-center justify-between">
+              <span>Operations Sector Map</span>
+              <span className="text-[10px] font-mono text-amber-400 uppercase">Geospatial</span>
+            </button>
+            <button onClick={() => handleNav('/client-vault')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white flex items-center justify-between">
+              <span>Client Vault Portal</span>
+              <span className="text-[10px] font-mono text-emerald-400 uppercase">Retained</span>
+            </button>
             <button onClick={() => handleNav('/security-assessment')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-amber-400 font-semibold">
               Interactive Security Assessment
             </button>
+            <button onClick={() => handleNav('/blog')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white">
+              Security Intelligence Blog
+            </button>
+            <button onClick={() => handleNav('/licences-compliance')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white">
+              Licences & Compliance
+            </button>
             <button onClick={() => handleNav('/faq')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white">
               Frequently Asked Questions (FAQ)
-            </button>
-            <button onClick={() => handleNav('/blog')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white">
-              Security Insights & Blog
             </button>
             <button onClick={() => handleNav('/careers')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white">
               Careers

@@ -36,10 +36,10 @@ export const initialSiteSettings: SiteSettings = {
   },
   socialPublishingMode: 'manual_approval',
   socialLinks: {
-    facebook: 'https://facebook.com/safenetsecurityltd',
+    facebook: 'https://www.facebook.com/share/1H3ow82i4q',
     linkedin: 'https://linkedin.com/company/safenet-security-solutions-ltd',
-    x: 'https://x.com/safenet_sec',
-    instagram: 'https://instagram.com/safenetsecurityltd',
+    x: 'https://x.com/LtdSafenet10159',
+    instagram: 'https://www.instagram.com/invites/contact/?utm_source=ig_contact_invite&utm_medium=copy_link&utm_content=itpgcrs',
     youtube: 'https://youtube.com/@safenetsecurityltd'
   }
 };
@@ -1231,7 +1231,7 @@ export const initialSocialAccounts: SocialAccount[] = [
   {
     platform: 'x',
     displayName: 'X / Twitter Official',
-    handle: '@safenet_sec',
+    handle: '@LtdSafenet10159',
     connected: true,
     tokenExpiry: '2026-11-01T00:00:00Z',
     autoPublish: true,
