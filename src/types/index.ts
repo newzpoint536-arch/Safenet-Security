@@ -265,7 +265,36 @@ export interface AuditLog {
   ip: string;
 }
 
-export type AdminRole = 'super_admin' | 'operations_officer' | 'content_editor' | 'auditor';
+export type AdminRole = 
+  | 'super_admin' 
+  | 'operations_director' 
+  | 'content_editor' 
+  | 'social_media_manager' 
+  | 'operations_officer' 
+  | 'recruitment_officer' 
+  | 'auditor';
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  createdAt: string;
+  lastLogin?: string;
+  status: 'active' | 'suspended';
+}
+
+export interface AdminAuthSession {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: AdminRole;
+    lastLogin?: string;
+  };
+  token: string;
+  expiresAt: string;
+}
 
 export interface SystemNotification {
   id: string;

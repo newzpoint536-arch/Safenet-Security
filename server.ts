@@ -4,6 +4,16 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { readDatabase, writeDatabase, getDatabaseHealth } from './src/server/dbStore.js';
+import {
+  hasAdminUsers,
+  createInitialSuperAdmin,
+  loginAdministrator,
+  verifySessionToken,
+  logoutSession,
+  resetPasswordWithPassphrase,
+  requireAdminAuth,
+  sanitizeUser
+} from './src/server/auth.js';
 
 dotenv.config();
 
@@ -197,13 +207,42 @@ Structure your response into:
 });
 
 // GET persistent database state
-app.get('/api/db/state', (_req, res) => {
+// If authenticated admin: returns full state including leads, assessments, jobApplications, auditLogs
+// If unauthenticated public visitor: returns safe public content (settings, published blog posts, etc.)
+app.get('/api/db/state', (req, res) => {
   try {
     const data = readDatabase();
     if (!data) {
       return res.json({ seeded: false, data: null });
     }
-    return res.json({ seeded: true, data });
+
+    const authHeader = req.headers.authorization;
+    let token: string | undefined;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
+    } else if (req.headers['x-admin-token']) {
+      token = String(req.headers['x-admin-token']).trim();
+    }
+
+    const session = verifySessionToken(token);
+    if (session) {
+      const sanitizedData = {
+        ...data,
+        adminUsers: Array.isArray(data.adminUsers) ? data.adminUsers.map(sanitizeUser) : []
+      };
+      return res.json({ seeded: true, data: sanitizedData, authenticated: true, role: session.role });
+    }
+
+    // Public sanitized projection
+    const publicData = {
+      siteSettings: data.siteSettings,
+      blogPosts: (data.blogPosts || []).filter((p: any) => p.status === 'published'),
+      testimonials: (data.testimonials || []).filter((t: any) => t.published),
+      careerOpenings: data.careerOpenings || [],
+      updatedAt: data.updatedAt
+    };
+
+    return res.json({ seeded: true, data: publicData, authenticated: false });
   } catch (err: any) {
     return res.status(500).json({ error: err.message || 'Failed to read database state' });
   }
@@ -219,14 +258,235 @@ app.get('/api/db/health', (_req, res) => {
   }
 });
 
-// POST persistent database sync
-app.post('/api/db/sync', (req, res) => {
+// ==========================================
+// PUBLIC INGESTION ENDPOINTS (No Admin Auth Required)
+// ==========================================
+
+// Public Lead / Quote Inquiry Submission
+app.post('/api/public/leads', (req, res) => {
+  try {
+    const db = readDatabase();
+    if (!db) return res.status(500).json({ error: 'Database service is temporarily unavailable.' });
+    const leadData = req.body;
+    if (!leadData.fullName || !leadData.phone) {
+      return res.status(400).json({ error: 'Full name and direct phone number are required.' });
+    }
+
+    const newLead = {
+      id: `lead-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      createdAt: new Date().toISOString(),
+      status: 'new',
+      notes: [],
+      ...leadData
+    };
+
+    if (!Array.isArray(db.leads)) db.leads = [];
+    db.leads.unshift(newLead);
+
+    // Audit log
+    if (Array.isArray(db.auditLogs)) {
+      db.auditLogs.unshift({
+        id: `audit-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        user: `Inquirer (${newLead.fullName})`,
+        action: 'LEAD_SUBMITTED',
+        target: 'Commercial Leads Vault',
+        details: `Quote inquiry received for ${newLead.serviceRequired || 'Security Operations'} in ${newLead.location || 'Nigeria'}.`,
+        ip: req.ip || req.socket.remoteAddress || '127.0.0.1'
+      });
+      if (db.auditLogs.length > 200) db.auditLogs = db.auditLogs.slice(0, 200);
+    }
+
+    writeDatabase(db);
+    return res.json({ success: true, lead: newLead });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Public Automated Security Assessment Submission
+app.post('/api/public/assessments', (req, res) => {
+  try {
+    const db = readDatabase();
+    if (!db) return res.status(500).json({ error: 'Database service is temporarily unavailable.' });
+    const assessData = req.body;
+    if (!assessData.clientName || !assessData.clientPhone) {
+      return res.status(400).json({ error: 'Client name and direct phone number are required.' });
+    }
+
+    const newAssessment = {
+      id: `assess-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      createdAt: new Date().toISOString(),
+      ...assessData
+    };
+
+    if (!Array.isArray(db.securityAssessments)) db.securityAssessments = [];
+    db.securityAssessments.unshift(newAssessment);
+
+    if (Array.isArray(db.auditLogs)) {
+      db.auditLogs.unshift({
+        id: `audit-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        user: `Client (${newAssessment.clientName})`,
+        action: 'ASSESSMENT_COMPLETED',
+        target: 'Tactical Threat Evaluations',
+        details: `Facility evaluation generated: Vulnerability score ${newAssessment.calculatedScore}/100 (${newAssessment.riskRating}) for ${newAssessment.propertyType}.`,
+        ip: req.ip || req.socket.remoteAddress || '127.0.0.1'
+      });
+      if (db.auditLogs.length > 200) db.auditLogs = db.auditLogs.slice(0, 200);
+    }
+
+    writeDatabase(db);
+    return res.json({ success: true, assessment: newAssessment });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Public Careers Job Application Submission
+app.post('/api/public/careers', (req, res) => {
+  try {
+    const db = readDatabase();
+    if (!db) return res.status(500).json({ error: 'Database service is temporarily unavailable.' });
+    const appData = req.body;
+    if (!appData.applicantName || !appData.applicantPhone || !appData.applicantEmail) {
+      return res.status(400).json({ error: 'Applicant name, phone, and email are required.' });
+    }
+
+    const newApp = {
+      id: `app-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      submittedAt: new Date().toISOString(),
+      status: 'pending',
+      ...appData
+    };
+
+    if (!Array.isArray(db.jobApplications)) db.jobApplications = [];
+    db.jobApplications.unshift(newApp);
+
+    if (Array.isArray(db.auditLogs)) {
+      db.auditLogs.unshift({
+        id: `audit-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        user: `Candidate (${newApp.applicantName})`,
+        action: 'CANDIDATE_APPLICATION',
+        target: 'Recruitment Dossier',
+        details: `Application received for role: ${newApp.jobTitle || 'Security Guard'}.`,
+        ip: req.ip || req.socket.remoteAddress || '127.0.0.1'
+      });
+      if (db.auditLogs.length > 200) db.auditLogs = db.auditLogs.slice(0, 200);
+    }
+
+    writeDatabase(db);
+    return res.json({ success: true, application: newApp });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// ADMINISTRATIVE AUTHENTICATION ENDPOINTS
+// ==========================================
+
+// Check initial provisioning status
+app.get('/api/admin/setup-status', (_req, res) => {
+  try {
+    const isSetup = hasAdminUsers();
+    return res.json({ isSetup });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Initial Super Administrator Provisioning (Disabled once any administrator exists)
+app.post('/api/admin/setup-initial', (req, res) => {
+  try {
+    const { name, email, password, recoveryPassphrase } = req.body;
+    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    const result = createInitialSuperAdmin({ name, email, password, recoveryPassphrase, ip });
+    return res.json({ success: true, ...result });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+// Administrator Login with Rate Limiting & Audit Logging
+app.post('/api/admin/login', (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password credentials are required.' });
+    }
+    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    const result = loginAdministrator(email, password, ip);
+    return res.json({ success: true, ...result });
+  } catch (err: any) {
+    return res.status(401).json({ error: err.message });
+  }
+});
+
+// Session Verification Endpoint
+app.get('/api/admin/me', requireAdminAuth(), (req: any, res) => {
+  const session = req.adminSession;
+  return res.json({
+    authenticated: true,
+    user: {
+      id: session.userId,
+      name: session.name,
+      email: session.email,
+      role: session.role
+    },
+    expiresAt: new Date(session.expiresAt).toISOString()
+  });
+});
+
+// Administrator Session Logout
+app.post('/api/admin/logout', (req, res) => {
+  const authHeader = req.headers.authorization;
+  let token: string | undefined;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7).trim();
+  } else if (req.headers['x-admin-token']) {
+    token = String(req.headers['x-admin-token']).trim();
+  }
+  logoutSession(token);
+  return res.json({ success: true, message: 'Administrator session securely terminated.' });
+});
+
+// Forgot / Reset Password via Cryptographic Recovery Passphrase
+app.post('/api/admin/reset-password', (req, res) => {
+  try {
+    const { email, recoveryPassphrase, newPassword } = req.body;
+    if (!email || !recoveryPassphrase || !newPassword) {
+      return res.status(400).json({ error: 'Email, recovery passphrase, and new password are required.' });
+    }
+    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    resetPasswordWithPassphrase(email, recoveryPassphrase, newPassword, ip);
+    return res.json({
+      success: true,
+      message: 'Password credentials securely updated. Please log in with your updated credentials.'
+    });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+// Protected database sync endpoint — requires valid administrator session
+app.post('/api/db/sync', requireAdminAuth(), (req: any, res) => {
   try {
     const payload = req.body;
     if (!payload || typeof payload !== 'object') {
       return res.status(400).json({ error: 'Valid state object is required.' });
     }
-    const success = writeDatabase(payload);
+
+    const currentDb = readDatabase() || ({} as any);
+    // Preserve admin users credentials and audit records
+    const mergedDb = {
+      ...currentDb,
+      ...payload,
+      adminUsers: currentDb.adminUsers || payload.adminUsers || []
+    };
+
+    const success = writeDatabase(mergedDb);
     if (!success) {
       return res.status(500).json({ error: 'Failed to write to persistent database.' });
     }

@@ -1,0 +1,483 @@
+{
+  "leads": [
+    {
+      "id": "lead-1792154084927-3146",
+      "createdAt": "2026-10-16T12:34:44.927Z",
+      "status": "new",
+      "notes": [],
+      "fullName": "Chief Babatunde Adeleke",
+      "company": "Zenith Marine Terminals",
+      "email": "babatunde@zenithmarine.ng",
+      "phone": "+234 803 555 0192",
+      "location": "Apapa Port Complex, Lagos",
+      "serviceRequired": "Armed Maritime Security & Fast Patrol Escorts",
+      "propertyType": "Marine Terminal & Tank Farm",
+      "urgency": "immediate"
+    },
+    {
+      "id": "lead-1",
+      "fullName": "Chief Babatunde Alabi",
+      "company": "Alabi Properties & Investment Group",
+      "email": "b.alabi@alabigroup.ng",
+      "phone": "+234 802 345 6789",
+      "whatsapp": "+234 802 345 6789",
+      "location": "Victoria Island, Lagos",
+      "industry": "Corporate Organizations",
+      "serviceRequired": "Corporate Security Management & CCTV Installation",
+      "propertyType": "12-Storey Commercial Tower",
+      "projectDescription": "Require 24 armed/unarmed static guards, automated biometric speed gates at reception, and a 64-channel CCTV installation with cloud backup.",
+      "urgency": "immediate",
+      "preferredContact": "phone",
+      "status": "proposal",
+      "createdAt": "2026-03-24T14:20:00Z",
+      "estimatedValue": "₦48,000,000 / year",
+      "notes": [
+        {
+          "id": "note-1",
+          "author": "Lead Manager",
+          "text": "Conducted initial site survey on March 25. Chief Alabi was impressed by our command center capabilities. Proposal submitted for review.",
+          "createdAt": "2026-03-25T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "lead-2",
+      "fullName": "Engr. Folake Adeleke",
+      "company": "Pacific Marine & Logistics Ltd",
+      "email": "f.adeleke@pacificmarineltd.com",
+      "phone": "+234 818 901 2345",
+      "whatsapp": "+234 818 901 2345",
+      "location": "Onne Port, Port Harcourt",
+      "industry": "Maritime & Ports",
+      "serviceRequired": "Maritime Security & Armed Escort Vessels",
+      "propertyType": "Offshore Jetty & Supply Vessels",
+      "projectDescription": "Need continuous armed maritime security escort for 3 crew supply vessels operating between Port Harcourt and Bonny Island.",
+      "urgency": "1-2_weeks",
+      "preferredContact": "whatsapp",
+      "status": "qualified",
+      "createdAt": "2026-03-26T09:15:00Z",
+      "estimatedValue": "₦85,000,000 / year",
+      "notes": [
+        {
+          "id": "note-2",
+          "author": "Specialist Advisory Team",
+          "text": "Vessel coordinates and Navy MOU alignment discussed via WhatsApp call. Scheduling technical security audit next Tuesday.",
+          "createdAt": "2026-03-26T11:30:00Z"
+        }
+      ]
+    },
+    {
+      "id": "lead-3",
+      "fullName": "Dr. Chuka Eze",
+      "company": "Harmony Crest Residents Association",
+      "email": "chairman@harmonycrestestate.org",
+      "phone": "+234 803 765 4321",
+      "whatsapp": "+234 803 765 4321",
+      "location": "Lekki Scheme 2, Lagos",
+      "industry": "Residential Estates",
+      "serviceRequired": "Residential & Estate Security with K9 Patrols",
+      "propertyType": "Gated Residential Estate (180 Houses)",
+      "projectDescription": "Current security provider has poor attendance. We need 16 disciplined guards, WhatsApp visitor pass system, and night K9 patrols along the perimeter.",
+      "urgency": "immediate",
+      "preferredContact": "phone",
+      "status": "new",
+      "createdAt": "2026-03-27T10:05:00Z",
+      "estimatedValue": "₦26,000,000 / year",
+      "notes": []
+    }
+  ],
+  "securityAssessments": [],
+  "blogPosts": [
+    {
+      "id": "blog-1",
+      "slug": "corporate-security-trends-nigeria-2026",
+      "title": "Modernizing Corporate Security in Nigeria: From Gatekeeping to Integrated Intelligence",
+      "excerpt": "How leading enterprises in Lagos, Abuja, and Port Harcourt are combining UK operational rigor with biometric access control, drone surveillance, and continuous command center monitoring.",
+      "content": "For decades, corporate security in Nigeria was largely understood as a static numbers game: post guards at the main gate, hand them an attendance notebook, and hope for the best.\n\nHowever, the threat landscape confronting Nigerian businesses today has evolved dramatically. Organized criminal networks, corporate espionage, civil disruptions, and targeted executive extortion demand a paradigm shift from passive gatekeeping to proactive, technology-driven security intelligence.\n\n### The Limits of Traditional Manned Guarding\n\nWhile professional, well-trained human guards remain indispensable, relying on human eyes alone across sprawling facilities is inherently flawed. Night fatigue, blind spots around perimeter walls, and lack of immediate coordination during coordinated incursions leave facilities exposed.\n\nSafeNet's operational model addresses this by fusing high-discipline human personnel with autonomous technology. Every guard on our client sites operates as a connected node in a wider security network—equipped with electronic patrol verification wands and direct radio uplinks to our 24/7 central monitoring station.\n\n### The Role of Drone Surveillance in Estate and Industrial Defense\n\nNowhere is the technological leap more apparent than in drone surveillance. Across large manufacturing plants, residential estates in Lekki, and industrial tank farms, drone reconnaissance provides:\n1. **Instant Elevation**: Gaining 360-degree top-down visibility over a 50-hectare facility in less than 90 seconds.\n2. **Thermal Penetration**: Detecting human thermal signatures hidden in darkness or dense vegetation where conventional cameras cannot see.\n3. **Safe Vectoring**: Directing armed ground units safely to intercept intruders without exposing guards to blind ambushes.\n\n### Building Resilience for 2026 and Beyond\n\nAs Nigerian enterprises expand, executive protection, data sovereignty, and physical perimeter hardening must be designed as an integrated ecosystem. Forward-thinking companies are conducting comprehensive security audits, identifying single points of failure, and migrating to unified monitoring.\n\nSafeNet Security Solutions Ltd continues to lead this transformation, proving that with UK-level operational standards and authentic Nigerian local knowledge, corporations can operate with total confidence and unyielding vigilance.",
+      "featuredImage": "/src/assets/images/hero_nigerian_security_command_1790574276695.jpg",
+      "author": {
+        "name": "Capt. Emmanuel Adeleke (Rtd.)",
+        "role": "Head of Operations & Strategic Advisory, SafeNet"
+      },
+      "category": "Corporate Security",
+      "tags": [
+        "Corporate Security",
+        "Drone Surveillance",
+        "CCTV Monitoring",
+        "Nigeria Business"
+      ],
+      "publishedAt": "2026-03-15T09:00:00Z",
+      "updatedAt": "2026-03-15T09:00:00Z",
+      "readingTime": "5 min read",
+      "status": "published",
+      "seoTitle": "Corporate Security Trends Nigeria 2026 — SafeNet Security Solutions Ltd",
+      "seoDescription": "Discover how modern Nigerian corporations are adopting integrated drone surveillance, biometric access, and 24/7 command operations.",
+      "relatedServices": [
+        "cctv-installation-monitoring",
+        "drone-surveillance-security",
+        "corporate-security"
+      ],
+      "views": 1420
+    },
+    {
+      "id": "blog-2",
+      "slug": "drone-surveillance-revolution-industrial-protection",
+      "title": "Deploying Autonomous Drone Surveillance: Lessons from Nigerian Energy Facilities",
+      "excerpt": "Examining the technical deployment of thermal-equipped UAVs for perimeter security, pipeline inspection, and rapid alert verification in remote terrains.",
+      "content": "Securing critical infrastructure across remote and challenging Nigerian terrain—from the coastal mangroves of the Niger Delta to the expansive savannahs of the North—presents unique physical challenges.\n\nGround vehicles are often constrained by bad roads or flooded paths. Human foot patrols move too slowly to intercept fast-moving intruders. Autonomous and piloted drone technology has emerged as the definitive game-changer.\n\n### Thermal Night Vision: The Ultimate Deterrent\n\nMost infiltration and pipeline tapping attempts occur between 00:00 and 04:00 under the cover of pitch darkness. Standard CCTV cameras, even with infrared illuminators, have a limited range of 30 to 50 meters.\n\nBy contrast, SafeNet's industrial drone platforms, such as the DJI Matrice 350 RTK equipped with radiometric thermal sensors, detect human body heat from altitudes exceeding 300 meters and distances over 1.5 kilometers. An intruder attempting to breach a boundary fence cannot hide behind trees, water hyacinth, or topography.\n\n### Key Deployment Considerations in Nigeria\n\nDeploying security drones in Nigeria requires careful operational planning:\n- **Regulatory Compliance**: Full compliance with NCAA (Nigerian Civil Aviation Authority) flight clearances and designated no-fly zones around airfields.\n- **Power Resilience**: Automated weather-proof charging docks and solar battery stations ensuring zero mission downtime.\n- **Data Encryption**: AES-256 encrypted digital video streams transmitting directly to our command center to prevent signal interception.\n\nThrough disciplined aerial surveillance, energy and logistics operators can turn thousands of unmonitored hectares into an actively defended, transparent security perimeter.",
+      "featuredImage": "/src/assets/images/nigerian_drone_surveillance_1790574299226.jpg",
+      "author": {
+        "name": "Ibrahim Bala",
+        "role": "Chief Drone Systems Engineer, SafeNet"
+      },
+      "category": "Security Technology",
+      "tags": [
+        "Drone Surveillance",
+        "Critical Infrastructure",
+        "Oil & Gas",
+        "Thermal Imaging"
+      ],
+      "publishedAt": "2026-03-08T11:30:00Z",
+      "updatedAt": "2026-03-08T11:30:00Z",
+      "readingTime": "6 min read",
+      "status": "published",
+      "seoTitle": "Drone Surveillance for Industrial Facilities in Nigeria — SafeNet",
+      "seoDescription": "How thermal drone security overcomes terrain challenges to protect industrial and energy corridors across Nigeria.",
+      "relatedServices": [
+        "drone-surveillance-security",
+        "pipeline-surveillance-security"
+      ],
+      "views": 980
+    },
+    {
+      "id": "blog-3",
+      "slug": "executive-protection-vip-travel-security-lagos",
+      "title": "Executive Protection & Secure Transit in Urban Nigeria: A Strategic Guide",
+      "excerpt": "Essential protocols for international delegations, C-suite executives, and high-net-worth families navigating travel between airport corridors, hotels, and operational sites.",
+      "content": "Navigating commercial centers like Lagos, Port Harcourt, and Abuja requires meticulous attention to transit security. While urban Nigeria offers tremendous commercial vitality, transit corridors present inherent vulnerabilities if travel planning is neglected.\n\n### The Fallacy of \"Armed Flashing Lights\"\n\nA common misconception is that effective executive protection simply means hiring a loud vehicle with sirens and armed men waving guns. In truth, overt aggression often draws unnecessary attention, provokes hostility in heavy traffic, and telegraphs the presence of high-value principals.\n\nTrue executive protection, as practiced by SafeNet to British and international standards, is built upon **discretion, advance reconnaissance, and predictive intelligence**:\n\n1. **Advance Reconnaissance**: Our advance security officers traverse the intended itinerary hours before the principal departs, identifying choke points, alternative escape routes, nearby verified hospitals, and safe havens.\n2. **Low-Profile Armored Vehicles**: B6-rated armored SUVs look indistinguishable from standard luxury vehicles, offering certified protection against high-caliber assault rifle rounds and explosive fragments without announcing vulnerability.\n3. **Evasive Tactical Driving**: Certified security drivers trained in vehicle dynamics, anti-ambush evasive maneuvers, and skid recovery ensure the principal is never pinned in gridlock.\n\n### Safe Tarmac Meet-and-Greet Protocols\n\nThe initial arrival at the airport is often the most stressful phase for visiting foreign executives. SafeNet’s protocol teams coordinate directly with federal aviation authorities to provide seamless airside greeting, expedited customs processing, and direct transfer into staged armored convoys.\n\nBy mitigating transit friction and physical risks, executives can focus entirely on their business objectives, secure in the knowledge that their personal safety is guarded by true professionals.",
+      "featuredImage": "/src/assets/images/hero_nigerian_corporate_guards_1790574288138.jpg",
+      "author": {
+        "name": "David O. Nwosu",
+        "role": "Director of Specialist Protection, SafeNet"
+      },
+      "category": "Executive Protection",
+      "tags": [
+        "Executive Protection",
+        "VIP Transit",
+        "Armored Vehicles",
+        "Lagos Security"
+      ],
+      "publishedAt": "2026-02-27T14:15:00Z",
+      "updatedAt": "2026-02-27T14:15:00Z",
+      "readingTime": "5 min read",
+      "status": "published",
+      "seoTitle": "Executive Protection & VIP Travel Security in Lagos — SafeNet",
+      "seoDescription": "Strategic guide to VIP travel security, armored motorcades, and close protection in urban Nigeria.",
+      "relatedServices": [
+        "vip-escort-bodyguard-services",
+        "airport-security"
+      ],
+      "views": 1210
+    }
+  ],
+  "socialAccounts": [
+    {
+      "platform": "facebook",
+      "displayName": "Facebook Page",
+      "handle": "SafeNet Security Solutions Ltd",
+      "connected": true,
+      "tokenExpiry": "2026-09-30T00:00:00Z",
+      "autoPublish": true,
+      "lastSyncedAt": "2026-03-27T20:00:00Z"
+    },
+    {
+      "platform": "linkedin",
+      "displayName": "LinkedIn Corporate",
+      "handle": "SafeNet Security Solutions Ltd",
+      "connected": true,
+      "tokenExpiry": "2026-10-15T00:00:00Z",
+      "autoPublish": true,
+      "lastSyncedAt": "2026-03-27T20:00:00Z"
+    },
+    {
+      "platform": "x",
+      "displayName": "X / Twitter Official",
+      "handle": "@safenet_sec",
+      "connected": true,
+      "tokenExpiry": "2026-11-01T00:00:00Z",
+      "autoPublish": true,
+      "lastSyncedAt": "2026-03-27T20:00:00Z"
+    },
+    {
+      "platform": "instagram",
+      "displayName": "Instagram Business",
+      "handle": "@safenetsecurityltd",
+      "connected": true,
+      "tokenExpiry": "2026-08-20T00:00:00Z",
+      "autoPublish": false,
+      "lastSyncedAt": "2026-03-27T20:00:00Z"
+    },
+    {
+      "platform": "youtube",
+      "displayName": "YouTube Channel",
+      "handle": "SafeNet Security Solutions",
+      "connected": false,
+      "tokenExpiry": "",
+      "autoPublish": false,
+      "lastSyncedAt": ""
+    }
+  ],
+  "socialPublishJobs": [
+    {
+      "id": "job-1",
+      "postId": "blog-1",
+      "postTitle": "Modernizing Corporate Security in Nigeria: From Gatekeeping to Integrated Intelligence",
+      "platform": "facebook",
+      "status": "published",
+      "date": "2026-03-15T09:05:00Z",
+      "postUrl": "https://facebook.com/safenetsecurityltd/posts/981247192",
+      "caption": "Is your corporate facility still relying on static gatekeeping? Discover how leading Nigerian enterprises in Lagos and Abuja are integrating 24/7 command surveillance, biometric access, and drone reconnaissance for comprehensive protection.",
+      "hashtags": [
+        "#CorporateSecurity",
+        "#NigeriaBusiness",
+        "#SafeNetSecurity",
+        "#LagosHQ"
+      ],
+      "retryCount": 0,
+      "idempotencyKey": "fb-blog-1-20260315",
+      "utmParams": {
+        "source": "facebook",
+        "medium": "social",
+        "campaign": "blog",
+        "content": "corporate-security-trends-nigeria-2026"
+      }
+    },
+    {
+      "id": "job-2",
+      "postId": "blog-1",
+      "postTitle": "Modernizing Corporate Security in Nigeria: From Gatekeeping to Integrated Intelligence",
+      "platform": "linkedin",
+      "status": "published",
+      "date": "2026-03-15T09:06:00Z",
+      "postUrl": "https://linkedin.com/feed/update/urn:li:activity:71298410294",
+      "caption": "Strategic Insight for C-Suite & Risk Leaders: The shift from passive physical guarding to integrated security intelligence in Nigeria. Read our operational analysis on balancing corporate hospitality with unyielding perimeter vigilance.",
+      "hashtags": [
+        "#SecurityManagement",
+        "#RiskMitigation",
+        "#NigeriaEnterprise",
+        "#SafeNet"
+      ],
+      "retryCount": 0,
+      "idempotencyKey": "li-blog-1-20260315",
+      "utmParams": {
+        "source": "linkedin",
+        "medium": "social",
+        "campaign": "blog",
+        "content": "corporate-security-trends-nigeria-2026"
+      }
+    },
+    {
+      "id": "job-3",
+      "postId": "blog-1",
+      "postTitle": "Modernizing Corporate Security in Nigeria: From Gatekeeping to Integrated Intelligence",
+      "platform": "x",
+      "status": "published",
+      "date": "2026-03-15T09:07:00Z",
+      "postUrl": "https://x.com/safenet_sec/status/178912401924",
+      "caption": "Why static guards alone cannot protect modern corporate towers in Nigeria. Read how SafeNet combines UK operational standards with 24/7 CCTV command centers and drone defense: https://safenetsecurityltd.com/blog/corporate-security-trends-nigeria-2026",
+      "hashtags": [
+        "#CorporateSecurity",
+        "#Lagos",
+        "#DroneSecurity"
+      ],
+      "retryCount": 0,
+      "idempotencyKey": "x-blog-1-20260315",
+      "utmParams": {
+        "source": "x",
+        "medium": "social",
+        "campaign": "blog",
+        "content": "corporate-security-trends-nigeria-2026"
+      }
+    },
+    {
+      "id": "job-4",
+      "postId": "blog-2",
+      "postTitle": "Deploying Autonomous Drone Surveillance: Lessons from Nigerian Energy Facilities",
+      "platform": "linkedin",
+      "status": "published",
+      "date": "2026-03-08T11:35:00Z",
+      "postUrl": "https://linkedin.com/feed/update/urn:li:activity:71298410385",
+      "caption": "Thermal Reconnaissance in Remote Corridors: How unmanned aerial systems (UAVs) are helping energy and industrial operators monitor sprawling perimeters in Nigeria with sub-minute alert verification.",
+      "hashtags": [
+        "#DroneSurveillance",
+        "#OilAndGasSecurity",
+        "#EnergyInfrastructure",
+        "#SafeNet"
+      ],
+      "retryCount": 0,
+      "idempotencyKey": "li-blog-2-20260308",
+      "utmParams": {
+        "source": "linkedin",
+        "medium": "social",
+        "campaign": "blog",
+        "content": "drone-surveillance-revolution-industrial-protection"
+      }
+    }
+  ],
+  "jobApplications": [],
+  "testimonials": [
+    {
+      "id": "test-1",
+      "name": "Mr. James Akume",
+      "position": "Head of Facility Operations",
+      "organization": "Corporate Banking Tower, Victoria Island",
+      "testimonial": "SafeNet completely transformed our facility security. Their officers are sharp, well-groomed, and punctually disciplined. The integration of biometric speed gates and 24/7 camera monitoring has eliminated access vulnerabilities while elevating our corporate presentation.",
+      "rating": 5,
+      "published": true,
+      "location": "Lagos"
+    },
+    {
+      "id": "test-2",
+      "name": "Mrs. Patricia Oghene",
+      "position": "Chairperson, Security Committee",
+      "organization": "Lekki Peninsula Gated Community",
+      "testimonial": "Since SafeNet took over our estate security, our residents have slept with total peace of mind. The thermal drone night sweeps and automated visitor pass codes stopped unauthorized entries immediately. Their supervisory responsiveness is exemplary.",
+      "rating": 5,
+      "published": true,
+      "location": "Lagos"
+    },
+    {
+      "id": "test-3",
+      "name": "Mr. Chinedu Okonkwo",
+      "position": "Director of Logistics & Terminal Security",
+      "organization": "Apex Maritime Services Ltd",
+      "testimonial": "In the Niger Delta, reliable maritime security is rare. SafeNet delivers international-grade offshore protection with impeccable naval coordination. Their escort patrol teams have conducted over 60 passages for our vessels without a single security breach.",
+      "rating": 5,
+      "published": true,
+      "location": "Port Harcourt"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "audit-1792154129517",
+      "timestamp": "2026-10-16T12:35:29.517Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "PASSWORD_RESET_PASSPHRASE",
+      "target": "Admin Security Credentials",
+      "details": "Password was securely updated using the cryptographic recovery passphrase.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1792154119775",
+      "timestamp": "2026-10-16T12:35:19.775Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "ADMIN_LOGIN_SUCCESS",
+      "target": "Operations Command Console",
+      "details": "Successful authenticated session started with role [super_admin].",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1792154119668",
+      "timestamp": "2026-10-16T12:35:19.668Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "ADMIN_PROVISIONED",
+      "target": "System Security Core",
+      "details": "First Super Administrator account securely provisioned with PBKDF2-SHA512 encryption.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1792154084927",
+      "timestamp": "2026-10-16T12:34:44.927Z",
+      "user": "Inquirer (Chief Babatunde Adeleke)",
+      "action": "LEAD_SUBMITTED",
+      "target": "Commercial Leads Vault",
+      "details": "Quote inquiry received for Armed Maritime Security & Fast Patrol Escorts in Apapa Port Complex, Lagos.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1792154084893",
+      "timestamp": "2026-10-16T12:34:44.893Z",
+      "user": "Intruder (hacker@example.com)",
+      "action": "ADMIN_PROVISIONED",
+      "target": "System Security Core",
+      "details": "First Super Administrator account securely provisioned with PBKDF2-SHA512 encryption.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1792154084806",
+      "timestamp": "2026-10-16T12:34:44.806Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "ADMIN_PROVISIONED",
+      "target": "System Security Core",
+      "details": "First Super Administrator account securely provisioned with PBKDF2-SHA512 encryption.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1",
+      "timestamp": "2026-03-27T18:30:00Z",
+      "user": "Super Admin",
+      "action": "SYSTEM_INITIALIZATION",
+      "target": "SafeNet Security Command Centre",
+      "details": "Core security systems, blog CMS, and social distribution channels initialized.",
+      "ip": "102.89.23.14 (Lagos, Nigeria)"
+    },
+    {
+      "id": "audit-2",
+      "timestamp": "2026-03-27T19:15:00Z",
+      "user": "Operations Officer",
+      "action": "LEAD_STATUS_UPDATE",
+      "target": "Chief Babatunde Alabi (Lead #1)",
+      "details": "Status updated from Qualified to Proposal Sent.",
+      "ip": "102.89.23.14 (Lagos, Nigeria)"
+    },
+    {
+      "id": "audit-3",
+      "timestamp": "2026-03-27T20:00:00Z",
+      "user": "Content Manager",
+      "action": "SOCIAL_QUEUE_SYNC",
+      "target": "Social Distribution Worker",
+      "details": "Automated publishing queue verified across Facebook, LinkedIn, and X.",
+      "ip": "102.89.23.14 (Lagos, Nigeria)"
+    }
+  ],
+  "siteSettings": {
+    "companyName": "SafeNet Security Solutions Ltd",
+    "tagline": "Protecting What Matters Most With Unwavering Vigilance",
+    "phone": "+234 813 129 6054",
+    "email": "info@safenetsecurityltd.com",
+    "whatsapp": "+234 813 129 6054",
+    "addressNigeria": "Plot 14, Commercial Avenue, Victoria Island, Lagos, Nigeria",
+    "addressUK": "85 Great Portland Street, First Floor, London, W1W 7LT, United Kingdom",
+    "establishedYear": "2025",
+    "stats": {
+      "trainedGuards": "500+",
+      "responseTime": "24/7",
+      "droneCctvCoverage": "100%",
+      "clientRetention": "99.4%"
+    },
+    "socialPublishingMode": "manual_approval",
+    "socialLinks": {
+      "facebook": "https://facebook.com/safenetsecurityltd",
+      "linkedin": "https://linkedin.com/company/safenet-security-solutions-ltd",
+      "x": "https://x.com/safenet_sec",
+      "instagram": "https://instagram.com/safenetsecurityltd",
+      "youtube": "https://youtube.com/@safenetsecurityltd"
+    }
+  },
+  "adminUsers": [
+    {
+      "id": "admin-1792154119668",
+      "name": "Capt. Emmanuel Adeleke (Rtd.)",
+      "email": "director@safenetsecurityltd.com",
+      "role": "super_admin",
+      "salt": "6bf42b6db9cf6dcbc6fce5ccd87303b914056bbbe77dc41a782eeeff3cd3d78f",
+      "hash": "e5771f1470273d408ff0983b89d2666b41cc747d9c107fa138c240f5664aa0bd0dd79ce209171b74d55ca49f92c63eb12d5cb85d0f218c296a549759923f84d9",
+      "recoveryPassphraseHash": "642643f07628ad0cdaf02ab82c3a25a8016bc13540ce2bb8a4ab2758d9d32ecb1d1fdbcbccc7dc35bb2ce7b694cebde233dcd2423379362dbc3817f5826ba787",
+      "recoveryPassphraseSalt": "aa98534d9085b79ad3c327ee5d9eb61cbfe8a35da9efff87488b8a069722e2ec",
+      "createdAt": "2026-10-16T12:35:19.668Z",
+      "lastLogin": "2026-10-16T12:35:29.601Z",
+      "status": "active"
+    }
+  ],
+  "updatedAt": "2026-10-16T12:35:29.602Z"
+}

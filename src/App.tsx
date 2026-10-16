@@ -22,13 +22,14 @@ import { LicencesCompliancePage } from './pages/LicencesCompliancePage';
 import { ContactPage } from './pages/ContactPage';
 import { FaqPage } from './pages/FaqPage';
 import { AdminCommandCentre } from './pages/AdminCommandCentre';
+import { AdminLoginPage } from './pages/AdminLoginPage';
 import { ClientVaultPage } from './pages/ClientVaultPage';
 import { OperationsMapPage } from './pages/OperationsMapPage';
 
-import { ShieldAlert, ArrowLeft } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, RefreshCw } from 'lucide-react';
 
 const RouterContent: React.FC = () => {
-  const { currentPath, navigate, toastMessage } = useApp();
+  const { currentPath, navigate, toastMessage, isAdminAuthenticated, adminLoading } = useApp();
 
   const renderRoute = () => {
     // Strip trailing slash for consistent matching
@@ -136,8 +137,28 @@ const RouterContent: React.FC = () => {
       return <FaqPage />;
     }
 
-    // Admin Command Centre
-    if (cleanPath === '/admin' || cleanPath === '/cms') {
+    // Admin Dedicated Login
+    if (cleanPath === '/admin/login') {
+      return <AdminLoginPage />;
+    }
+
+    // Admin Command Centre / Dashboard
+    if (cleanPath === '/admin' || cleanPath === '/admin/dashboard' || cleanPath === '/cms') {
+      if (adminLoading) {
+        return (
+          <div className="min-h-[70vh] flex items-center justify-center bg-slate-950 px-4">
+            <div className="flex flex-col items-center gap-3 text-slate-400">
+              <RefreshCw className="w-8 h-8 text-amber-400 animate-spin" />
+              <span className="text-xs uppercase tracking-widest font-mono">Verifying Administrative Clearance...</span>
+            </div>
+          </div>
+        );
+      }
+
+      if (!isAdminAuthenticated) {
+        return <AdminLoginPage />;
+      }
+
       return <AdminCommandCentre />;
     }
 

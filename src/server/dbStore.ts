@@ -17,9 +17,11 @@ export interface DatabaseSchema {
   socialAccounts: any[];
   socialPublishJobs: any[];
   jobApplications: any[];
+  careerOpenings?: any[];
   testimonials: any[];
   auditLogs: any[];
   siteSettings: any;
+  adminUsers?: any[];
   updatedAt: string;
 }
 
@@ -107,9 +109,11 @@ export function writeDatabase(data: Partial<DatabaseSchema>): boolean {
       socialAccounts: data.socialAccounts || existing.socialAccounts || [],
       socialPublishJobs: data.socialPublishJobs || existing.socialPublishJobs || [],
       jobApplications: data.jobApplications || existing.jobApplications || [],
+      careerOpenings: data.careerOpenings || existing.careerOpenings || [],
       testimonials: data.testimonials || existing.testimonials || [],
       auditLogs: data.auditLogs || existing.auditLogs || [],
       siteSettings: data.siteSettings || existing.siteSettings || {},
+      adminUsers: data.adminUsers !== undefined ? data.adminUsers : (existing.adminUsers || []),
       updatedAt: new Date().toISOString()
     };
 

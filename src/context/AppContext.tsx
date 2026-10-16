@@ -18,6 +18,7 @@ import {
   AuditLog,
   SocialPlatform,
   AdminRole,
+  AdminUser,
   SystemNotification,
   ProposalBlueprint
 } from '../types';
@@ -97,6 +98,25 @@ interface AppContextType {
   // Role-Based Access Control
   currentRole: AdminRole;
   setCurrentRole: (role: AdminRole) => void;
+
+  // Administrative Authentication & Session
+  adminUser: AdminUser | null;
+  adminSessionToken: string | null;
+  isAdminAuthenticated: boolean;
+  adminLoading: boolean;
+  loginAdmin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logoutAdmin: () => Promise<void>;
+  setupInitialSuperAdmin: (data: {
+    name: string;
+    email: string;
+    password: string;
+    recoveryPassphrase?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+  resetAdminPassword: (
+    email: string,
+    recoveryPassphrase: string,
+    newPassword: string
+  ) => Promise<{ success: boolean; error?: string }>;
 
   // System Notifications
   notifications: SystemNotification[];
@@ -221,6 +241,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Role-Based Access Control State
   const [currentRole, setCurrentRole] = useState<AdminRole>('super_admin');
 
+  // Administrator Authentication State
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [adminSessionToken, setAdminSessionToken] = useState<string | null>(() => {
+    return localStorage.getItem('safenet_admin_session_token');
+  });
+  const [adminLoading, setAdminLoading] = useState<boolean>(true);
+  const isAdminAuthenticated = Boolean(adminSessionToken && adminUser);
+
   // System Notifications State
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
 
@@ -238,12 +266,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Helper to sync state to server persistent file store
+  // Helper to sync state to server persistent file store (Protected with admin token)
   const syncToServer = async () => {
+    if (!adminSessionToken) return;
     try {
       await fetch('/api/db/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminSessionToken}`
+        },
         body: JSON.stringify({
           siteSettings,
           blogPosts,
@@ -261,31 +293,160 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // On initial mount: load from server persistent store
+  // Load database state from server (authenticated receives full CRM; unauthenticated receives public content)
+  const loadServerData = async (token?: string | null) => {
+    try {
+      const headers: Record<string, string> = {};
+      const activeToken = token !== undefined ? token : adminSessionToken;
+      if (activeToken) {
+        headers['Authorization'] = `Bearer ${activeToken}`;
+      }
+      const res = await fetch('/api/db/state', { headers });
+      const json = await res.json();
+      if (json && json.seeded && json.data) {
+        const d = json.data;
+        if (d.siteSettings) setSiteSettings(d.siteSettings);
+        if (Array.isArray(d.blogPosts) && d.blogPosts.length > 0) setBlogPosts(d.blogPosts);
+        if (Array.isArray(d.socialAccounts) && d.socialAccounts.length > 0) setSocialAccounts(d.socialAccounts);
+        if (Array.isArray(d.socialPublishJobs)) setSocialPublishJobs(d.socialPublishJobs);
+        if (Array.isArray(d.leads)) setLeads(d.leads);
+        if (Array.isArray(d.securityAssessments)) setSecurityAssessments(d.securityAssessments);
+        if (Array.isArray(d.jobApplications)) setJobApplications(d.jobApplications);
+        if (Array.isArray(d.testimonials)) setTestimonials(d.testimonials);
+        if (Array.isArray(d.auditLogs)) setAuditLogs(d.auditLogs);
+      }
+    } catch (err) {
+      console.warn('Server storage connection:', err);
+    }
+  };
+
+  // On mount: verify existing session token
   useEffect(() => {
-    fetch('/api/db/state')
-      .then(res => res.json())
-      .then(res => {
-        if (res && res.seeded && res.data) {
-          const d = res.data;
-          if (d.siteSettings) setSiteSettings(d.siteSettings);
-          if (Array.isArray(d.blogPosts) && d.blogPosts.length > 0) setBlogPosts(d.blogPosts);
-          if (Array.isArray(d.socialAccounts) && d.socialAccounts.length > 0) setSocialAccounts(d.socialAccounts);
-          if (Array.isArray(d.socialPublishJobs)) setSocialPublishJobs(d.socialPublishJobs);
-          if (Array.isArray(d.leads) && d.leads.length > 0) setLeads(d.leads);
-          if (Array.isArray(d.securityAssessments)) setSecurityAssessments(d.securityAssessments);
-          if (Array.isArray(d.jobApplications)) setJobApplications(d.jobApplications);
-          if (Array.isArray(d.testimonials)) setTestimonials(d.testimonials);
-          if (Array.isArray(d.auditLogs)) setAuditLogs(d.auditLogs);
-        } else {
-          // Initialize server store with baseline
-          syncToServer();
-        }
+    const token = localStorage.getItem('safenet_admin_session_token');
+    if (token) {
+      fetch('/api/admin/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
       })
-      .catch(err => console.warn('Server storage connection:', err));
+        .then(res => res.json())
+        .then(data => {
+          if (data.authenticated && data.user) {
+            setAdminUser(data.user);
+            setCurrentRole(data.user.role);
+            loadServerData(token);
+          } else {
+            localStorage.removeItem('safenet_admin_session_token');
+            setAdminSessionToken(null);
+            loadServerData(null);
+          }
+        })
+        .catch(() => {
+          loadServerData(null);
+        })
+        .finally(() => {
+          setAdminLoading(false);
+        });
+    } else {
+      loadServerData(null);
+      setAdminLoading(false);
+    }
 
     refreshNotifications();
   }, []);
+
+  // Admin Login Action
+  const loginAdmin = async (emailInput: string, passwordInput: string) => {
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailInput, password: passwordInput })
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.token) {
+        localStorage.setItem('safenet_admin_session_token', data.token);
+        setAdminSessionToken(data.token);
+        setAdminUser(data.user);
+        setCurrentRole(data.user.role);
+        await loadServerData(data.token);
+        showToast(`Welcome back, ${data.user.name}. Authenticated as [${data.user.role.toUpperCase()}].`);
+        return { success: true };
+      }
+      return { success: false, error: data.error || 'Authentication rejected.' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Login request failed.' };
+    }
+  };
+
+  // Admin Logout Action
+  const logoutAdmin = async () => {
+    try {
+      if (adminSessionToken) {
+        await fetch('/api/admin/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${adminSessionToken}` }
+        });
+      }
+    } catch (err) {
+      console.warn('Logout request failed:', err);
+    } finally {
+      localStorage.removeItem('safenet_admin_session_token');
+      setAdminSessionToken(null);
+      setAdminUser(null);
+      navigate('/admin/login');
+      showToast('Administrator session safely terminated.');
+    }
+  };
+
+  // Initial Provisioning Action
+  const setupInitialSuperAdmin = async (data: {
+    name: string;
+    email: string;
+    password: string;
+    recoveryPassphrase?: string;
+  }) => {
+    try {
+      const res = await fetch('/api/admin/setup-initial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const resData = await res.json();
+      if (res.ok && resData.success && resData.token) {
+        localStorage.setItem('safenet_admin_session_token', resData.token);
+        setAdminSessionToken(resData.token);
+        setAdminUser(resData.user);
+        setCurrentRole(resData.user.role);
+        await loadServerData(resData.token);
+        showToast('Super Administrator account provisioned successfully.');
+        return { success: true };
+      }
+      return { success: false, error: resData.error || 'Initial provisioning failed.' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Setup request failed.' };
+    }
+  };
+
+  // Reset Password Action
+  const resetAdminPassword = async (emailInput: string, recoveryPass: string, newPass: string) => {
+    try {
+      const res = await fetch('/api/admin/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: emailInput,
+          recoveryPassphrase: recoveryPass,
+          newPassword: newPass
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return { success: true };
+      }
+      return { success: false, error: data.error || 'Password reset failed.' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Password reset request failed.' };
+    }
+  };
 
   // Sync to LocalStorage & Server Store
   useEffect(() => {
@@ -417,15 +578,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addLead = (leadData: Omit<Lead, 'id' | 'createdAt' | 'status' | 'notes'>) => {
+    const tempId = `lead-${Date.now()}`;
     const newLead: Lead = {
       ...leadData,
-      id: `lead-${Date.now()}`,
+      id: tempId,
       createdAt: new Date().toISOString(),
       status: 'new',
       notes: []
     };
     setLeads(prev => [newLead, ...prev]);
-    addAuditLog('NEW_LEAD', newLead.fullName, `Lead captured for service: ${newLead.serviceRequired}`);
+
+    // Dispatch directly to server public ingestion endpoint
+    fetch('/api/public/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(leadData)
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.lead && data.lead.id) {
+          setLeads(prev => prev.map(l => l.id === tempId ? data.lead : l));
+        }
+      })
+      .catch(err => console.warn('Public lead submission fallback to memory:', err));
+
     showToast('Quote request submitted successfully. Our security coordinator will contact you shortly.');
   };
 
@@ -436,7 +612,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ...lead.notes,
           {
             id: `note-${Date.now()}`,
-            author: 'Operations Command',
+            author: adminUser?.name || 'Operations Command',
             text: note,
             createdAt: new Date().toISOString()
           }
@@ -458,7 +634,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ...lead.notes,
             {
               id: `note-${Date.now()}`,
-              author: 'Security Officer',
+              author: adminUser?.name || 'Security Officer',
               text,
               createdAt: new Date().toISOString()
             }
@@ -472,13 +648,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addSecurityAssessment = (data: Omit<SecurityAssessmentSubmission, 'id' | 'createdAt'>) => {
+    const tempId = `assessment-${Date.now()}`;
     const newSubmission: SecurityAssessmentSubmission = {
       ...data,
-      id: `assessment-${Date.now()}`,
+      id: tempId,
       createdAt: new Date().toISOString()
     };
     setSecurityAssessments(prev => [newSubmission, ...prev]);
-    // Also create a lead automatically
+
+    fetch('/api/public/assessments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+      .then(res => res.json())
+      .then(resData => {
+        if (resData.assessment && resData.assessment.id) {
+          setSecurityAssessments(prev => prev.map(a => a.id === tempId ? resData.assessment : a));
+        }
+      })
+      .catch(err => console.warn('Public assessment submission fallback to memory:', err));
+
+    // Also automatically create a lead for follow-up
     addLead({
       fullName: data.clientName,
       company: data.clientCompany,
@@ -492,18 +683,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       urgency: data.calculatedScore > 65 ? 'immediate' : '1-2_weeks',
       preferredContact: 'phone'
     });
-    addAuditLog('ASSESSMENT_COMPLETED', data.clientName, `Calculated ${data.riskRating}`);
   };
 
   const addJobApplication = (app: Omit<JobApplication, 'id' | 'submittedAt' | 'status'>) => {
+    const tempId = `app-${Date.now()}`;
     const newApp: JobApplication = {
       ...app,
-      id: `app-${Date.now()}`,
+      id: tempId,
       submittedAt: new Date().toISOString(),
       status: 'pending'
     };
     setJobApplications(prev => [newApp, ...prev]);
-    addAuditLog('JOB_APPLICATION', app.jobTitle, `Applicant: ${app.applicantName}`);
+
+    fetch('/api/public/careers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(app)
+    })
+      .then(res => res.json())
+      .then(resData => {
+        if (resData.application && resData.application.id) {
+          setJobApplications(prev => prev.map(a => a.id === tempId ? resData.application : a));
+        }
+      })
+      .catch(err => console.warn('Public career submission fallback to memory:', err));
+
     showToast('Your job application has been submitted successfully to SafeNet Recruitment.');
   };
 
@@ -731,6 +935,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearAiChatInitialPrompt,
         currentRole,
         setCurrentRole,
+        adminUser,
+        adminSessionToken,
+        isAdminAuthenticated,
+        adminLoading,
+        loginAdmin,
+        logoutAdmin,
+        setupInitialSuperAdmin,
+        resetAdminPassword,
         notifications,
         refreshNotifications,
         generateProposalBlueprint

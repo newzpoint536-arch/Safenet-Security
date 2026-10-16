@@ -27,7 +27,9 @@ import {
   Bell,
   Printer,
   FileCheck2,
-  ShieldAlert
+  ShieldAlert,
+  Camera,
+  Copy
 } from 'lucide-react';
 import { BlogPost, LeadStatus, SocialPlatform, AdminRole, ProposalBlueprint } from '../types';
 import { SecurityProposalModal } from '../components/proposals/SecurityProposalModal';
@@ -58,10 +60,13 @@ export const AdminCommandCentre: React.FC = () => {
     currentRole,
     setCurrentRole,
     notifications,
-    generateProposalBlueprint
+    generateProposalBlueprint,
+    adminUser,
+    logoutAdmin,
+    navigate
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'leads' | 'blog' | 'social' | 'assessments' | 'careers' | 'settings' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'leads' | 'blog' | 'social' | 'assessments' | 'careers' | 'settings' | 'audit' | 'media'>('overview');
   const [activeProposalModal, setActiveProposalModal] = useState<ProposalBlueprint | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [blogPreviewModal, setBlogPreviewModal] = useState<BlogPost | null>(null);
@@ -221,10 +226,33 @@ export const AdminCommandCentre: React.FC = () => {
                 className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-amber-400 font-bold focus:outline-none"
               >
                 <option value="super_admin">Super Administrator</option>
-                <option value="operations_officer">Operations Officer</option>
+                <option value="operations_director">Operations Director</option>
                 <option value="content_editor">Content Editor</option>
+                <option value="social_media_manager">Social Media Manager</option>
+                <option value="operations_officer">Operations Officer</option>
+                <option value="recruitment_officer">Recruitment Officer</option>
                 <option value="auditor">Auditor (Read-Only)</option>
               </select>
+            </div>
+
+            {/* Authenticated Admin Badge & Logout */}
+            <div className="flex items-center gap-2.5 pl-3 border-l border-slate-800">
+              <div className="text-right hidden sm:block">
+                <div className="text-white text-xs font-semibold truncate max-w-[150px]">
+                  {adminUser?.name || 'Administrator'}
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono truncate max-w-[150px]">
+                  {adminUser?.email || 'admin@safenetsecurityltd.com'}
+                </div>
+              </div>
+              <button
+                onClick={logoutAdmin}
+                className="px-2.5 py-1 rounded-md bg-red-950/70 border border-red-800/70 hover:bg-red-900 text-red-200 hover:text-white transition-colors flex items-center gap-1.5 font-medium cursor-pointer"
+                title="End Administrator Session"
+              >
+                <Lock className="w-3 h-3 text-red-400" />
+                <span>Logout</span>
+              </button>
             </div>
 
             {/* Notifications Popover Trigger */}
@@ -297,6 +325,7 @@ export const AdminCommandCentre: React.FC = () => {
             { id: 'social', label: `Social Distribution (${socialPublishJobs.length})`, icon: Share2 },
             { id: 'assessments', label: `Security Audits (${securityAssessments.length})`, icon: Cpu },
             { id: 'careers', label: `Recruitment (${jobApplications.length})`, icon: Briefcase },
+            { id: 'media', label: 'Media Library', icon: Camera },
             { id: 'settings', label: 'Site Settings', icon: Settings },
             { id: 'audit', label: `Audit Log (${auditLogs.length})`, icon: Activity }
           ].map((tab) => {
@@ -1345,6 +1374,122 @@ export const AdminCommandCentre: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: MEDIA LIBRARY */}
+        {activeTab === 'media' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+              <div>
+                <h2 className="text-lg font-bold font-heading text-white flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-amber-400" />
+                  <span>SafeNet Official Media & Tactical Asset Library</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  High-resolution brand assets, tactical operations photography, and facility deployment photography representing SafeNet Nigerian operations.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-400 font-mono">12 Curated Assets</span>
+              </div>
+            </div>
+
+            {/* Media Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {[
+                {
+                  id: 'med-1',
+                  title: 'Tactical Manned Guarding Patrol',
+                  category: 'Manned Operations',
+                  url: 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&q=80&w=1200',
+                  desc: 'Vetted, combat-trained security officers conducting perimeter rounds in Lagos.'
+                },
+                {
+                  id: 'med-2',
+                  title: 'Autonomous Drone Surveillance Recon',
+                  category: 'Aerial Reconnaissance',
+                  url: 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&q=80&w=1200',
+                  desc: 'Long-range optical UAV deployed for pipeline and estate perimeter sweeps.'
+                },
+                {
+                  id: 'med-3',
+                  title: '24/7 Security Operations Centre (SOC)',
+                  category: 'Command & Control',
+                  url: 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&q=80&w=1200',
+                  desc: 'Multi-screen real-time IP CCTV video wall with optical tripwire alarms.'
+                },
+                {
+                  id: 'med-4',
+                  title: 'Armoured Convoy & Mobile Escort',
+                  category: 'Executive Logistics',
+                  url: 'https://images.unsplash.com/photo-1506015391300-4802dc74de2e?auto=format&fit=crop&q=80&w=1200',
+                  desc: 'B6-armoured tactical convoy for executive and bullion protection in Nigeria.'
+                },
+                {
+                  id: 'med-5',
+                  title: 'Biometric Anti-Tailgating Speed Gates',
+                  category: 'Access Engineering',
+                  url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200',
+                  desc: 'Touchless facial recognition turnstiles at corporate headquarters ingress.'
+                },
+                {
+                  id: 'med-6',
+                  title: 'Industrial Perimeter Security Mesh',
+                  category: 'Perimeter Defense',
+                  url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=1200',
+                  desc: 'Anti-climb 358 weld-mesh fence with vibration sensors and thermal optics.'
+                },
+                {
+                  id: 'med-7',
+                  title: 'Tactical K9 Sentry & Detection Unit',
+                  category: 'Manned Operations',
+                  url: 'https://images.unsplash.com/photo-1534361960057-19889db98a1e?auto=format&fit=crop&q=80&w=1200',
+                  desc: 'Trained German Shepherd and Belgian Malinois explosive detection units.'
+                },
+                {
+                  id: 'med-8',
+                  title: 'Offshore & Maritime Security Vessel',
+                  category: 'Maritime Operations',
+                  url: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&q=80&w=1200',
+                  desc: 'Armed patrol craft for Gulf of Guinea anchorage and jetty defense.'
+                }
+              ].map(asset => (
+                <div key={asset.id} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col group hover:border-slate-700 transition-colors">
+                  <div className="relative aspect-video bg-slate-950 overflow-hidden">
+                    <img 
+                      src={asset.url} 
+                      alt={asset.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                      loading="lazy"
+                    />
+                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-slate-950/80 backdrop-blur-xs text-[10px] font-mono text-amber-400 border border-slate-800">
+                      {asset.category}
+                    </div>
+                  </div>
+                  <div className="p-3.5 flex-1 flex flex-col justify-between space-y-3">
+                    <div>
+                      <h4 className="text-xs font-bold text-white leading-snug line-clamp-1">{asset.title}</h4>
+                      <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">{asset.desc}</p>
+                    </div>
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 font-mono">1200x800 · JPG</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(asset.url);
+                          showToast(`Asset URL copied: ${asset.title}`);
+                        }}
+                        className="px-2 py-1 rounded bg-slate-800 hover:bg-amber-400 hover:text-slate-950 text-slate-300 text-[11px] flex items-center gap-1 transition-colors font-medium cursor-pointer"
+                        title="Copy direct asset URL"
+                      >
+                        <Copy className="w-3 h-3" />
+                        <span>Copy URL</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

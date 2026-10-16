@@ -196,8 +196,8 @@ export const Footer: React.FC = () => {
                 </button>
               </li>
               <li>
-                <button onClick={() => navigate('/admin')} className="text-slate-400 hover:text-amber-400 inline-flex items-center gap-1.5 transition-colors">
-                  <Lock className="w-3 h-3" /> Command Center CMS
+                <button onClick={() => navigate('/admin/login')} className="text-slate-400 hover:text-amber-400 inline-flex items-center gap-1.5 transition-colors text-xs">
+                  <Lock className="w-3 h-3 text-slate-500" /> Staff / Admin Login
                 </button>
               </li>
             </ul>
@@ -299,8 +299,8 @@ export const Footer: React.FC = () => {
             <button onClick={() => navigate('/contact')} className="hover:text-white transition-colors">
               Emergency Contact
             </button>
-            <button onClick={() => navigate('/admin')} className="text-amber-400 hover:underline">
-              CMS Portal
+            <button onClick={() => navigate('/admin/login')} className="text-slate-500 hover:text-slate-300 transition-colors">
+              Staff Access
             </button>
           </div>
         </div>

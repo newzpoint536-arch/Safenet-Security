@@ -429,15 +429,6 @@ export const Header: React.FC = () => {
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
           </button>
 
-          <button
-            onClick={() => handleNav('/admin')}
-            title="Command Centre Management"
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-300 hover:text-amber-400 hover:bg-slate-800/80 rounded-md border border-slate-800 transition-colors"
-          >
-            <Lock className="w-3.5 h-3.5 text-amber-400" />
-            <span>Command CMS</span>
-          </button>
-
           <button 
             onClick={() => handleNav('/request-quote')}
             className="px-4 py-2 text-xs font-semibold text-slate-950 bg-amber-400 hover:bg-amber-300 active:scale-98 rounded-md transition-all shadow-sm hover:shadow-amber-500/20 whitespace-nowrap cursor-pointer"
@@ -566,9 +557,6 @@ export const Header: React.FC = () => {
             </button>
             <button onClick={() => handleNav('/contact')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white">
               Contact SafeNet
-            </button>
-            <button onClick={() => handleNav('/admin')} className="text-left py-2 px-3 rounded bg-slate-900 text-amber-400 font-mono-numbers">
-              Command CMS Portal
             </button>
           </div>
 
