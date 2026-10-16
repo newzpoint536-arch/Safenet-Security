@@ -98,7 +98,36 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 transition-colors">
+    <header className="sticky top-0 z-50 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 transition-colors">
+      {/* Top Global Command Hotline & Verified Social Bar */}
+      <div className="hidden lg:block bg-slate-900/90 border-b border-slate-800/80 text-[11px] text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-8 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5 text-slate-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="font-medium text-slate-200">Nigeria HQ: Victoria Island, Lagos</span>
+              <span className="text-slate-600">|</span>
+              <span className="text-slate-400">Abuja FCT & Port Harcourt Hubs</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <a href={`tel:${siteSettings.phone.replace(/\s+/g, '')}`} className="flex items-center gap-1.5 hover:text-amber-400 transition-colors">
+              <Phone className="w-3 h-3 text-amber-400" />
+              <span className="font-mono text-slate-200">{siteSettings.phone}</span>
+            </a>
+            <span className="text-slate-700">|</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase font-semibold text-slate-500">Official Channels:</span>
+              <a href={siteSettings.socialLinks.linkedin} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-amber-400 transition-colors px-1 font-mono font-bold" title="LinkedIn">in</a>
+              <a href={siteSettings.socialLinks.facebook} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-amber-400 transition-colors px-1 font-mono font-bold" title="Facebook">fb</a>
+              <a href={siteSettings.socialLinks.x} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-amber-400 transition-colors px-1 font-mono font-bold" title="X / Twitter">X</a>
+              <a href={siteSettings.socialLinks.instagram} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-amber-400 transition-colors px-1 font-mono font-bold" title="Instagram">ig</a>
+              <a href={siteSettings.socialLinks.youtube} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-red-400 transition-colors px-1 font-mono font-bold" title="YouTube">yt</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Top Bar Contract: Zone 1 (Brand) — Zone 2 (Nav Links) — Zone 3 (Primary Actions) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         
@@ -541,6 +570,19 @@ export const Header: React.FC = () => {
             <button onClick={() => handleNav('/admin')} className="text-left py-2 px-3 rounded bg-slate-900 text-amber-400 font-mono-numbers">
               Command CMS Portal
             </button>
+          </div>
+
+          <div className="pt-2 pb-1 border-t border-slate-800/80">
+            <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-2">
+              Official Verified Channels
+            </div>
+            <div className="flex items-center gap-2">
+              <a href={siteSettings.socialLinks.linkedin} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-amber-400 font-mono font-bold" title="LinkedIn">in</a>
+              <a href={siteSettings.socialLinks.facebook} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-amber-400 font-mono font-bold" title="Facebook">fb</a>
+              <a href={siteSettings.socialLinks.x} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-amber-400 font-mono font-bold" title="X / Twitter">X</a>
+              <a href={siteSettings.socialLinks.instagram} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-amber-400 font-mono font-bold" title="Instagram">ig</a>
+              <a href={siteSettings.socialLinks.youtube} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-red-400 font-mono font-bold" title="YouTube">yt</a>
+            </div>
           </div>
 
           <div className="pt-3 border-t border-slate-800 space-y-2">

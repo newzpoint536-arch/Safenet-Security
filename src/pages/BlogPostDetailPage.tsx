@@ -23,6 +23,34 @@ export const BlogPostDetailPage: React.FC<{ slug: string }> = ({ slug }) => {
   useEffect(() => {
     if (post) {
       document.title = `${post.title} — SafeNet Security Intelligence`;
+
+      // Update or create canonical link tag
+      let canonicalLink = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
+      if (!canonicalLink) {
+        canonicalLink = document.createElement('link');
+        canonicalLink.setAttribute('rel', 'canonical');
+        document.head.appendChild(canonicalLink);
+      }
+      canonicalLink.setAttribute('href', `https://safenetsecurityltd.com/blog/${post.slug}`);
+
+      // Update meta description
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) {
+        metaDesc.setAttribute('content', post.excerpt || post.title);
+      }
+
+      // Update OG title, description & URL
+      let ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle) ogTitle.setAttribute('content', post.title);
+      let ogDesc = document.querySelector('meta[property="og:description"]');
+      if (ogDesc) ogDesc.setAttribute('content', post.excerpt || post.title);
+      let ogUrl = document.querySelector('meta[property="og:url"]');
+      if (!ogUrl) {
+        ogUrl = document.createElement('meta');
+        ogUrl.setAttribute('property', 'og:url');
+        document.head.appendChild(ogUrl);
+      }
+      ogUrl.setAttribute('content', `https://safenetsecurityltd.com/blog/${post.slug}`);
     }
   }, [post]);
 

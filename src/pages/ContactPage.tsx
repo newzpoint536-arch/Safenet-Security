@@ -186,6 +186,15 @@ export const ContactPage: React.FC = () => {
                   <span className="font-bold font-mono">ig</span>
                   <span>Instagram</span>
                 </a>
+                <a
+                  href={siteSettings.socialLinks.youtube}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-red-400/40 rounded text-xs text-slate-300 hover:text-red-400 transition-colors flex items-center gap-1.5"
+                >
+                  <span className="font-bold font-mono">yt</span>
+                  <span>YouTube</span>
+                </a>
               </div>
             </div>
 

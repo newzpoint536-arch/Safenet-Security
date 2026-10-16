@@ -272,6 +272,15 @@ export const Footer: React.FC = () => {
                 >
                   <span className="text-xs font-bold font-mono">ig</span>
                 </a>
+                <a 
+                  href={siteSettings.socialLinks.youtube} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-red-400 hover:border-red-400/40 transition-colors"
+                  aria-label="YouTube"
+                >
+                  <span className="text-xs font-bold font-mono">yt</span>
+                </a>
               </div>
             </div>
           </div>

@@ -47,6 +47,7 @@ export const AdminCommandCentre: React.FC = () => {
     socialPublishJobs,
     toggleSocialAccount,
     retrySocialJob,
+    updateSocialJobCaption,
     distributePostToSocials,
     securityAssessments,
     jobApplications,
@@ -63,6 +64,9 @@ export const AdminCommandCentre: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'leads' | 'blog' | 'social' | 'assessments' | 'careers' | 'settings' | 'audit'>('overview');
   const [activeProposalModal, setActiveProposalModal] = useState<ProposalBlueprint | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [blogPreviewModal, setBlogPreviewModal] = useState<BlogPost | null>(null);
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
+  const [editingCaptionText, setEditingCaptionText] = useState<string>('');
 
   // New Blog Post Form State
   const [newBlogTitle, setNewBlogTitle] = useState('');
@@ -89,7 +93,7 @@ export const AdminCommandCentre: React.FC = () => {
 
   const selectedLead = leads.find(l => l.id === selectedLeadId);
 
-  const handleCreateBlog = (e: React.FormEvent) => {
+  const handleCreateBlog = (e: React.FormEvent, status: 'published' | 'draft' = 'published') => {
     e.preventDefault();
     if (!newBlogTitle || !newBlogContent) return;
 
@@ -105,25 +109,59 @@ export const AdminCommandCentre: React.FC = () => {
         category: newBlogCategory,
         excerpt: newBlogExcerpt || newBlogContent.substring(0, 160) + '...',
         content: newBlogContent,
-        featuredImage: blogPosts[0]?.featuredImage || '',
+        featuredImage: blogPosts[0]?.featuredImage || 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&q=80&w=1200',
         author: {
           name: newBlogAuthor,
           role: 'Operations & Strategy Directorate'
         },
         tags: newBlogTags.split(',').map(t => t.trim()),
         readingTime: newBlogReadingTime || '5 min read',
-        status: 'published',
+        status,
         seoTitle: `${newBlogTitle} — SafeNet Security Solutions`,
         seoDescription: newBlogExcerpt || newBlogTitle,
         relatedServices: ['cctv-installation-monitoring', 'corporate-security']
       },
-      autoDistributeSocial
+      status === 'published' ? autoDistributeSocial : false
     );
 
     setNewBlogTitle('');
     setNewBlogExcerpt('');
     setNewBlogContent('');
     setIsCreatingBlog(false);
+  };
+
+  const handlePreviewUnsavedBlog = () => {
+    if (!newBlogTitle) {
+      showToast('Please enter an article title to preview.');
+      return;
+    }
+    const slug = newBlogTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
+    setBlogPreviewModal({
+      id: 'temp-preview',
+      slug,
+      title: newBlogTitle,
+      category: newBlogCategory,
+      excerpt: newBlogExcerpt || newBlogContent.substring(0, 160) + '...',
+      content: newBlogContent || 'Article prose draft content...',
+      featuredImage: blogPosts[0]?.featuredImage || 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&q=80&w=1200',
+      author: {
+        name: newBlogAuthor,
+        role: 'Operations & Strategy Directorate'
+      },
+      tags: newBlogTags.split(',').map(t => t.trim()),
+      readingTime: newBlogReadingTime || '5 min read',
+      status: 'draft',
+      publishedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      views: 0,
+      seoTitle: `${newBlogTitle} — SafeNet Security Solutions`,
+      seoDescription: newBlogExcerpt || newBlogTitle,
+      relatedServices: ['cctv-installation-monitoring', 'corporate-security']
+    });
   };
 
   const handleSaveSettings = (e: React.FormEvent) => {
@@ -720,16 +758,32 @@ export const AdminCommandCentre: React.FC = () => {
                     <span>Automatically queue & generate posts for connected Social Media accounts</span>
                   </label>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handlePreviewUnsavedBlog}
+                      className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded transition-colors flex items-center gap-1.5"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Preview Briefing</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleCreateBlog(e, 'draft')}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 font-semibold text-xs rounded transition-colors"
+                    >
+                      Save as Draft
+                    </button>
                     <button
                       type="button"
                       onClick={() => setIsCreatingBlog(false)}
-                      className="px-4 py-2 bg-slate-800 text-slate-400 text-xs rounded hover:text-white"
+                      className="px-3 py-2 text-slate-400 text-xs rounded hover:text-white"
                     >
                       Cancel
                     </button>
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={(e) => handleCreateBlog(e, 'published')}
                       className="px-5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded transition-all shadow-md flex items-center gap-1.5"
                     >
                       <Send className="w-3.5 h-3.5" />
@@ -747,6 +801,7 @@ export const AdminCommandCentre: React.FC = () => {
                   <tr>
                     <th className="py-3 px-4">Title</th>
                     <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4">Author</th>
                     <th className="py-3 px-4">Published</th>
                     <th className="py-3 px-4 text-right">Actions</th>
@@ -761,6 +816,15 @@ export const AdminCommandCentre: React.FC = () => {
                       <td className="py-3.5 px-4 text-amber-400 font-medium">
                         {post.category}
                       </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold ${
+                          post.status === 'published'
+                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                            : 'bg-amber-950 text-amber-300 border border-amber-800'
+                        }`}>
+                          {post.status || 'published'}
+                        </span>
+                      </td>
                       <td className="py-3.5 px-4 text-slate-300">
                         {post.author.name}
                       </td>
@@ -769,12 +833,33 @@ export const AdminCommandCentre: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-4 text-right space-x-2">
                         <button
-                          onClick={() => distributePostToSocials(post)}
-                          className="text-amber-400 hover:underline font-semibold"
-                          title="Broadcast to connected social networks"
+                          onClick={() => setBlogPreviewModal(post)}
+                          className="text-slate-300 hover:text-white font-medium inline-flex items-center gap-1"
+                          title="Preview article layout"
                         >
-                          Broadcast
+                          <Eye className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Preview</span>
                         </button>
+                        {post.status !== 'published' ? (
+                          <button
+                            onClick={() => {
+                              updateBlogPost(post.id, { status: 'published' });
+                              distributePostToSocials({ ...post, status: 'published' });
+                            }}
+                            className="text-emerald-400 hover:text-emerald-300 font-bold"
+                            title="Publish draft article & syndicate to social channels"
+                          >
+                            Publish
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => distributePostToSocials(post)}
+                            className="text-amber-400 hover:underline font-semibold"
+                            title="Broadcast to connected social networks"
+                          >
+                            Broadcast
+                          </button>
+                        )}
                         <button
                           onClick={() => deleteBlogPost(post.id)}
                           className="text-red-400 hover:text-red-300"
@@ -867,47 +952,109 @@ export const AdminCommandCentre: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-800/80">
                     {socialPublishJobs.map(job => (
-                      <tr key={job.id} className="hover:bg-slate-800/40">
-                        <td className="py-3.5 px-4 font-bold text-white max-w-xs truncate">
-                          {job.postTitle}
-                        </td>
-                        <td className="py-3.5 px-4 uppercase font-mono font-bold text-slate-300">
-                          {job.platform}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase ${
-                            job.status === 'published' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' :
-                            job.status === 'queued' ? 'bg-amber-950 text-amber-300 border border-amber-800' :
-                            job.status === 'failed' ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-slate-800 text-slate-400'
-                          }`}>
-                            {job.status}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 font-mono text-[10px] text-slate-400">
-                          utm_source={job.utmParams.source}&utm_medium={job.utmParams.medium}
-                        </td>
-                        <td className="py-3.5 px-4 text-right space-x-2">
-                          {job.status !== 'published' && (
+                      <React.Fragment key={job.id}>
+                        <tr className="hover:bg-slate-800/40">
+                          <td className="py-3.5 px-4 font-bold text-white max-w-xs truncate">
+                            {job.postTitle}
+                          </td>
+                          <td className="py-3.5 px-4 uppercase font-mono font-bold text-slate-300">
+                            {job.platform}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase ${
+                              job.status === 'published' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' :
+                              job.status === 'queued' ? 'bg-amber-950 text-amber-300 border border-amber-800' :
+                              job.status === 'failed' ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              {job.status}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[10px] text-slate-400">
+                            utm_source={job.utmParams.source}&utm_medium={job.utmParams.medium}
+                          </td>
+                          <td className="py-3.5 px-4 text-right space-x-2">
                             <button
-                              onClick={() => retrySocialJob(job.id)}
-                              className="text-amber-400 hover:underline font-semibold"
+                              onClick={() => {
+                                if (editingJobId === job.id) {
+                                  setEditingJobId(null);
+                                } else {
+                                  setEditingJobId(job.id);
+                                  setEditingCaptionText(job.caption || '');
+                                }
+                              }}
+                              className="text-slate-300 hover:text-white font-medium"
+                              title="Inspect and edit platform post copy"
                             >
-                              Approve / Publish
+                              <Edit3 className="w-3.5 h-3.5 inline mr-1" />
+                              <span>{editingJobId === job.id ? 'Close' : 'Edit Copy'}</span>
                             </button>
-                          )}
-                          {job.postUrl && (
-                            <a
-                              href={job.postUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-slate-400 hover:text-white"
-                              title="View post link"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5 inline" />
-                            </a>
-                          )}
-                        </td>
-                      </tr>
+                            {job.status !== 'published' && (
+                              <button
+                                onClick={() => retrySocialJob(job.id)}
+                                className="text-amber-400 hover:underline font-semibold"
+                              >
+                                Approve / Publish
+                              </button>
+                            )}
+                            {job.postUrl && (
+                              <a
+                                href={job.postUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-slate-400 hover:text-white"
+                                title="View live post link"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 inline" />
+                              </a>
+                            )}
+                          </td>
+                        </tr>
+
+                        {/* Expandable Caption Editor & Preview */}
+                        {editingJobId === job.id && (
+                          <tr className="bg-slate-950/70 border-b border-slate-800">
+                            <td colSpan={5} className="p-4 space-y-3">
+                              <div className="flex items-center justify-between text-xs text-slate-400">
+                                <span className="font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                                  <span>Review & Edit Copy for {job.platform.toUpperCase()}</span>
+                                </span>
+                                <span className="font-mono text-[11px]">
+                                  {editingCaptionText.length} characters
+                                </span>
+                              </div>
+                              <textarea
+                                rows={4}
+                                value={editingCaptionText}
+                                onChange={(e) => setEditingCaptionText(e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-700 rounded p-3 text-xs text-white focus:outline-none focus:border-amber-400 font-mono leading-relaxed"
+                                placeholder="Edit social post caption..."
+                              />
+                              <div className="flex items-center justify-between pt-1">
+                                <div className="text-[11px] text-slate-500 font-mono">
+                                  Hashtags: {job.hashtags?.join(' ') || 'None'}
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => setEditingJobId(null)}
+                                    className="px-3 py-1.5 bg-slate-800 text-slate-400 hover:text-white rounded text-xs"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      updateSocialJobCaption(job.id, editingCaptionText);
+                                      setEditingJobId(null);
+                                    }}
+                                    className="px-4 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded text-xs"
+                                  >
+                                    Save Copy
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -1203,6 +1350,142 @@ export const AdminCommandCentre: React.FC = () => {
         )}
 
       </div>
+
+      {/* Security Proposal Blueprint Modal */}
+      {activeProposalModal && (
+        <SecurityProposalModal
+          proposal={activeProposalModal}
+          onClose={() => setActiveProposalModal(null)}
+        />
+      )}
+
+      {/* Intelligence Briefing & Social Publishing Preview Modal */}
+      {blogPreviewModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden my-8 space-y-0">
+            {/* Modal Header */}
+            <div className="bg-slate-950 border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <Eye className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-sm font-display font-bold text-white flex items-center gap-2">
+                    <span>Briefing & Social Publishing Preview</span>
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase font-semibold ${
+                      blogPreviewModal.status === 'published'
+                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                        : 'bg-amber-950 text-amber-400 border border-amber-800'
+                    }`}>
+                      {blogPreviewModal.status}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    Canonical: https://safenetsecurityltd.com/blog/{blogPreviewModal.slug}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setBlogPreviewModal(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 sm:p-8 space-y-6 max-h-[75vh] overflow-y-auto">
+              <div className="space-y-3 pb-6 border-b border-slate-800">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="px-2.5 py-0.5 rounded bg-amber-400/10 border border-amber-400/30 text-amber-400 font-semibold">
+                    {blogPreviewModal.category}
+                  </span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-400 font-mono">{blogPreviewModal.readingTime}</span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-400">By {blogPreviewModal.author?.name}</span>
+                </div>
+                <h1 className="text-2xl font-display font-bold text-white leading-tight">
+                  {blogPreviewModal.title}
+                </h1>
+                <p className="text-sm text-slate-300 leading-relaxed italic bg-slate-950/60 p-3.5 rounded-lg border-l-2 border-amber-400">
+                  "{blogPreviewModal.excerpt}"
+                </p>
+              </div>
+
+              {/* Prose Content Preview */}
+              <div className="space-y-4 text-xs text-slate-300 leading-relaxed font-sans">
+                <div className="text-[11px] font-mono uppercase tracking-wider text-slate-500 font-bold">
+                  Prose Content Layout:
+                </div>
+                <div className="whitespace-pre-line bg-slate-950/40 p-4 rounded-xl border border-slate-800">
+                  {blogPreviewModal.content}
+                </div>
+              </div>
+
+              {/* Multi-Platform Social Syndicate Preview */}
+              <div className="space-y-3 pt-4 border-t border-slate-800">
+                <div className="text-xs font-display font-bold text-white flex items-center justify-between">
+                  <span>Authorized Social Syndicate Preview</span>
+                  <span className="text-[10px] text-slate-400 font-mono">Simulated Platform Formatting</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
+                    <div className="text-[10px] font-bold uppercase text-blue-400 flex items-center gap-1 font-mono">
+                      <span>LinkedIn Corporate Post</span>
+                    </div>
+                    <div className="text-slate-300 text-[11px] line-clamp-3">
+                      Executive Security Briefing: {blogPreviewModal.title} — {blogPreviewModal.excerpt}
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono">#SafeNet #CorporateDefense</div>
+                  </div>
+                  <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
+                    <div className="text-[10px] font-bold uppercase text-slate-300 flex items-center gap-1 font-mono">
+                      <span>X / Twitter Update</span>
+                    </div>
+                    <div className="text-slate-300 text-[11px] line-clamp-3">
+                      {blogPreviewModal.title}: https://safenetsecurityltd.com/blog/{blogPreviewModal.slug}
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono">#Security #Nigeria</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-950 border-t border-slate-800 px-6 py-4 flex items-center justify-between">
+              <span className="text-xs text-slate-400">
+                Preview Mode · Changes reflect live on public portal upon publish.
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setBlogPreviewModal(null)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded transition-colors"
+                >
+                  Close Preview
+                </button>
+                {blogPreviewModal.status === 'draft' && (
+                  <button
+                    onClick={() => {
+                      if (blogPreviewModal.id && blogPreviewModal.id !== 'temp-preview') {
+                        updateBlogPost(blogPreviewModal.id, { status: 'published' });
+                        distributePostToSocials({ ...blogPreviewModal, status: 'published' } as BlogPost);
+                      }
+                      setBlogPreviewModal(null);
+                      showToast('Article published and queued for social syndication.');
+                    }}
+                    className="px-5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded transition-all shadow-md flex items-center gap-1.5"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Publish & Syndicate Now</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -79,7 +79,8 @@ interface AppContextType {
   socialAccounts: SocialAccount[];
   socialPublishJobs: SocialPublishJob[];
   toggleSocialAccount: (platform: SocialPlatform) => void;
-  retrySocialJob: (jobId: string) => void;
+  retrySocialJob: (jobId: string) => Promise<void>;
+  updateSocialJobCaption: (jobId: string, caption: string) => void;
   distributePostToSocials: (post: BlogPost) => void;
 
   // Testimonial Management
@@ -615,21 +616,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(`${platform.toUpperCase()} connection updated.`);
   };
 
-  const retrySocialJob = (jobId: string) => {
+  const updateSocialJobCaption = (jobId: string, newCaption: string) => {
     setSocialPublishJobs(prev => prev.map(job => {
       if (job.id === jobId) {
-        return {
-          ...job,
-          status: 'published',
-          retryCount: job.retryCount + 1,
-          date: new Date().toISOString(),
-          postUrl: `https://${job.platform}.com/safenetsecurityltd/status/${Date.now().toString().slice(-6)}`
-        };
+        return { ...job, caption: newCaption };
       }
       return job;
     }));
-    addAuditLog('SOCIAL_JOB_RETRY', jobId, 'Retried and published successfully');
-    showToast('Social distribution task retried and published successfully.');
+    showToast('Social post caption updated.');
+  };
+
+  const retrySocialJob = async (jobId: string) => {
+    const job = socialPublishJobs.find(j => j.id === jobId);
+    if (!job) return;
+
+    try {
+      const res = await fetch('/api/social/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId: job.id,
+          platform: job.platform,
+          postTitle: job.postTitle,
+          caption: job.caption,
+          postUrl: job.postUrl
+        })
+      });
+
+      const data = await res.json();
+      const liveUrl = data?.result?.liveUrl || `https://${job.platform}.com/safenetsecurityltd/status/${Date.now().toString().slice(-6)}`;
+
+      setSocialPublishJobs(prev => prev.map(j => {
+        if (j.id === jobId) {
+          return {
+            ...j,
+            status: 'published',
+            retryCount: j.retryCount + 1,
+            date: new Date().toISOString(),
+            postUrl: liveUrl
+          };
+        }
+        return j;
+      }));
+      addAuditLog('SOCIAL_JOB_DISPATCHED', `${job.platform.toUpperCase()} - ${job.postTitle}`, `Status: published via ${data?.result?.mode || 'API'}`);
+      showToast(`Social distribution task dispatched to ${job.platform.toUpperCase()} successfully.`);
+    } catch (err: any) {
+      setSocialPublishJobs(prev => prev.map(j => {
+        if (j.id === jobId) {
+          return {
+            ...j,
+            status: 'failed',
+            errorMessage: err.message || 'API dispatch failed',
+            retryCount: j.retryCount + 1
+          };
+        }
+        return j;
+      }));
+      showToast(`Social dispatch error: ${err.message || 'Failed'}`);
+    }
   };
 
   const toggleTestimonialPublished = (id: string) => {
@@ -673,6 +717,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         socialPublishJobs,
         toggleSocialAccount,
         retrySocialJob,
+        updateSocialJobCaption,
         distributePostToSocials,
         toggleTestimonialPublished,
         auditLogs,
