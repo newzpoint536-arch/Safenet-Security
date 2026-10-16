@@ -3,6 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Defensive guard against third-party browser extensions (such as MetaMask, Phantom, Web3 wallets)
+      // which inject scripts (e.g. inpage.js) and throw unhandled connection errors inside iframe sandboxes.
+      (function() {
+        function isExtensionError(err, source) {
+          try {
+            var msg = (err && (err.message || (typeof err === 'string' ? err : ''))) || '';
+            var stack = (err && err.stack) || '';
+            var src = source || (err && (err.filename || err.fileName)) || '';
+            var combined = (msg + ' ' + stack + ' ' + src).toLowerCase();
+            return (
+              combined.indexOf('metamask') !== -1 ||
+              combined.indexOf('nkbihfbeogaeaoehlefnkodbefgpgknn') !== -1 ||
+              combined.indexOf('chrome-extension://') !== -1 ||
+              combined.indexOf('moz-extension://') !== -1 ||
+              combined.indexOf('safari-extension://') !== -1 ||
+              combined.indexOf('failed to connect to metamask') !== -1 ||
+              combined.indexOf('inpage.js') !== -1
+            );
+          } catch (e) {
+            return false;
+          }
+        }
+
+        window.addEventListener('error', function(event) {
+          if (isExtensionError(event.error, event.filename)) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(event) {
+          var reason = event.reason;
+          if (isExtensionError(reason, reason && (reason.fileName || reason.filename))) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            return true;
+          }
+        }, true);
+      })();
+    </script>
     <title>SafeNet Security Solutions Ltd — Corporate Security Command Centre</title>
     <meta name="description" content="SafeNet Security Solutions Ltd provides premier corporate security, drone surveillance, CCTV monitoring, access control, and executive protection across Nigeria." />
     <meta property="og:title" content="SafeNet Security Solutions Ltd — Corporate Security Command Centre" />

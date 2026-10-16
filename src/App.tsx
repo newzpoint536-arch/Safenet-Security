@@ -4,6 +4,7 @@ import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { FloatingWhatsApp } from './components/layout/FloatingWhatsApp';
 import { SafeNetAiAgent } from './components/chat/SafeNetAiAgent';
+import { ErrorBoundary } from './components/layout/ErrorBoundary';
 
 import { HomePage } from './pages/HomePage';
 import { AboutPage } from './pages/AboutPage';
@@ -205,8 +206,10 @@ const RouterContent: React.FC = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <RouterContent />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <RouterContent />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
