@@ -13,6 +13,9 @@ import {
   verifySessionToken,
   logoutSession,
   resetPasswordWithPassphrase,
+  isOwnerRecoveryAvailable,
+  recoverSuperAdminWithSecret,
+  getOrGenerateOwnerRecoverySecret,
   requireAdminAuth,
   sanitizeUser,
   setSessionCookies,
@@ -502,6 +505,51 @@ app.post('/api/admin/reset-password', async (req, res) => {
     });
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
+  }
+});
+
+// Check whether one-time owner recovery is available (Returns boolean only, never the secret)
+app.get('/api/admin/owner-recovery-status', (_req, res) => {
+  try {
+    const isAvailable = isOwnerRecoveryAvailable();
+    return res.json({ isAvailable });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// One-time protected owner-level recovery procedure
+app.post('/api/admin/owner-recovery', async (req, res) => {
+  try {
+    const { recoverySecret, newEmail, newName, newPassword, newRecoveryPassphrase } = req.body;
+    if (!recoverySecret || !newEmail || !newPassword) {
+      return res.status(400).json({
+        error: 'Owner recovery authorization secret, new email address, and new password are required.'
+      });
+    }
+
+    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    const result = await recoverSuperAdminWithSecret({
+      recoverySecret,
+      newEmail,
+      newName,
+      newPassword,
+      newRecoveryPassphrase,
+      ip
+    });
+
+    // Establish fresh HttpOnly, Secure, SameSite=Lax session cookie and anti-CSRF cookie
+    setSessionCookies(res, result.session, req);
+
+    return res.json({
+      success: true,
+      message: 'Owner-level recovery completed successfully. Super Administrator access established.',
+      user: result.user,
+      csrfToken: result.session.csrfToken,
+      expiresAt: new Date(result.session.expiresAt).toISOString()
+    });
+  } catch (err: any) {
+    return res.status(403).json({ error: err.message });
   }
 });
 

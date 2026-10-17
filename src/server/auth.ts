@@ -1,8 +1,15 @@
 import crypto from 'node:crypto';
 import util from 'node:util';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Request, Response, NextFunction } from 'express';
 import { readDatabase, writeDatabase } from './dbStore.js';
 import type { AdminRole, AuditLog } from '../types/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const OWNER_RECOVERY_TOKEN_FILE = path.resolve(__dirname, '../../data/.owner_recovery_token');
 
 const pbkdf2Async = util.promisify(crypto.pbkdf2);
 
@@ -654,6 +661,197 @@ export async function resetPasswordWithPassphrase(
 
   writeDatabase(db);
   return true;
+}
+
+// ==========================================
+// 8B. ONE-TIME OWNER PRIVILEGE RECOVERY
+// ==========================================
+
+let isOwnerRecoveryBurned = false;
+
+export function getOrGenerateOwnerRecoverySecret(): string {
+  if (isOwnerRecoveryBurned) return '';
+
+  // 1. Check environment variable first
+  if (process.env.OWNER_RECOVERY_KEY && process.env.OWNER_RECOVERY_KEY.trim().length > 0) {
+    return process.env.OWNER_RECOVERY_KEY.trim();
+  }
+
+  // 2. Check server-protected one-time token file in /data/.owner_recovery_token
+  try {
+    if (fs.existsSync(OWNER_RECOVERY_TOKEN_FILE)) {
+      const stored = fs.readFileSync(OWNER_RECOVERY_TOKEN_FILE, 'utf-8').trim();
+      if (stored.length > 0) return stored;
+    }
+
+    // 3. Generate high-entropy 256-bit cryptographically secure one-time recovery key
+    const generated = 'SFN-OWNER-' + crypto.randomBytes(24).toString('hex').toUpperCase();
+    const dataDir = path.dirname(OWNER_RECOVERY_TOKEN_FILE);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    fs.writeFileSync(OWNER_RECOVERY_TOKEN_FILE, generated, { encoding: 'utf-8', mode: 0o600 });
+    console.log('\n================================================================');
+    console.log(' [SAFENET SECURITY] ONE-TIME OWNER RECOVERY AUTHORIZATION SECRET:');
+    console.log(` ${generated}`);
+    console.log(' Use this key on /admin/login under "Owner Recovery" to reset credentials.');
+    console.log(' Once used, this key will be permanently burned and disabled.');
+    console.log('================================================================\n');
+    return generated;
+  } catch (err) {
+    console.warn('[SafeNet Security] Could not access owner recovery token file:', err);
+    return '';
+  }
+}
+
+export function isOwnerRecoveryAvailable(): boolean {
+  if (isOwnerRecoveryBurned) return false;
+  const secret = getOrGenerateOwnerRecoverySecret();
+  return Boolean(secret && secret.length > 0);
+}
+
+export async function recoverSuperAdminWithSecret(data: {
+  recoverySecret: string;
+  newEmail: string;
+  newName?: string;
+  newPassword: string;
+  newRecoveryPassphrase?: string;
+  ip: string;
+}): Promise<{ user: ReturnType<typeof sanitizeUser>; session: AdminSession }> {
+  if (isOwnerRecoveryBurned) {
+    throw new Error('Owner recovery authorization has already been consumed or permanently disabled.');
+  }
+
+  const serverSecret = getOrGenerateOwnerRecoverySecret();
+  if (!serverSecret) {
+    throw new Error('Owner recovery authorization is not active on this server.');
+  }
+
+  const rateLimitKey = `owner-recovery:${data.ip}`;
+  const rateCheck = checkRateLimit(rateLimitKey);
+  if (!rateCheck.allowed) {
+    throw new Error(
+      `Owner recovery locked due to excessive failed attempts. Please retry in ${rateCheck.remainingMinutes} minutes.`
+    );
+  }
+
+  // Timing-safe comparison to prevent side-channel timing analysis
+  const providedBuf = Buffer.from(data.recoverySecret.trim());
+  const expectedBuf = Buffer.from(serverSecret.trim());
+
+  let isAuthorized = false;
+  if (providedBuf.length === expectedBuf.length) {
+    isAuthorized = crypto.timingSafeEqual(providedBuf, expectedBuf);
+  }
+
+  if (!isAuthorized) {
+    const { attemptsLeft, locked } = recordFailedAttempt(rateLimitKey, 3, 30 * 60 * 1000);
+    const db = readDatabase();
+    if (db) {
+      appendTamperEvidentAuditLog(db, {
+        user: `Unknown (${data.newEmail || 'Anonymous'})`,
+        action: 'OWNER_RECOVERY_INVALID_SECRET',
+        target: 'Security Authorization Gateway',
+        details: `Failed owner recovery attempt with invalid authorization secret. ${attemptsLeft} attempts remaining.`,
+        ip: data.ip
+      });
+      writeDatabase(db);
+    }
+
+    if (locked) {
+      throw new Error('Maximum owner recovery attempts exceeded. Operation locked for 30 minutes.');
+    }
+    throw new Error(`Invalid owner recovery authorization secret. ${attemptsLeft} attempt(s) remaining.`);
+  }
+
+  // Clear rate limits on valid recovery secret
+  clearRateLimit(rateLimitKey);
+
+  const db = readDatabase();
+  if (!db) {
+    throw new Error('Database service is unavailable.');
+  }
+
+  const users: AdminUserRecord[] = Array.isArray(db.adminUsers) ? db.adminUsers : [];
+  if (users.length === 0) {
+    throw new Error('No administrator account exists to recover. Please complete initial provisioning.');
+  }
+
+  // Locate existing super_admin (or primary administrator)
+  const adminRecord = users.find(u => u.role === 'super_admin') || users[0];
+
+  const newEmail = data.newEmail.trim().toLowerCase();
+  if (!newEmail || !newEmail.includes('@')) {
+    throw new Error('A valid official administrative email address is required.');
+  }
+
+  const strength = validatePasswordStrength(data.newPassword);
+  if (!strength.valid) {
+    throw new Error(strength.reason || 'New password does not meet security requirements.');
+  }
+
+  // Hash new password using OWASP-standard 210,000 PBKDF2-SHA512 iterations and 32-byte salt
+  const { salt, hash, iterations } = await hashPasswordAsync(data.newPassword, undefined, RECOMMENDED_ITERATIONS);
+
+  let recHash = adminRecord.recoveryPassphraseHash;
+  let recSalt = adminRecord.recoveryPassphraseSalt;
+  let recIter = adminRecord.recoveryPassphraseIterations;
+
+  if (data.newRecoveryPassphrase && data.newRecoveryPassphrase.trim().length >= 10) {
+    const rec = await hashPasswordAsync(data.newRecoveryPassphrase.trim(), undefined, RECOMMENDED_ITERATIONS);
+    recHash = rec.hash;
+    recSalt = rec.salt;
+    recIter = rec.iterations;
+  }
+
+  const previousEmail = adminRecord.email;
+  const previousName = adminRecord.name;
+
+  // Preserve existing account record ID and role, update credentials
+  adminRecord.email = newEmail;
+  if (data.newName && data.newName.trim().length > 0) {
+    adminRecord.name = data.newName.trim();
+  }
+  adminRecord.salt = salt;
+  adminRecord.hash = hash;
+  adminRecord.iterations = iterations;
+  adminRecord.recoveryPassphraseHash = recHash;
+  adminRecord.recoveryPassphraseSalt = recSalt;
+  adminRecord.recoveryPassphraseIterations = recIter;
+  adminRecord.status = 'active';
+  adminRecord.lastLogin = new Date().toISOString();
+
+  // Invalidate all existing administrator sessions across all devices
+  invalidateAllUserSessions(adminRecord.id);
+
+  // Permanently burn and disable this one-time recovery authorization
+  isOwnerRecoveryBurned = true;
+  try {
+    if (fs.existsSync(OWNER_RECOVERY_TOKEN_FILE)) {
+      fs.unlinkSync(OWNER_RECOVERY_TOKEN_FILE);
+    }
+  } catch (err) {
+    console.warn('[SafeNet Security] Could not remove token file after consumption:', err);
+  }
+
+  // Record tamper-evident audit log
+  appendTamperEvidentAuditLog(db, {
+    user: `${adminRecord.name} (${adminRecord.email})`,
+    action: 'OWNER_PRIVILEGE_RECOVERY',
+    target: 'Super Administrator Account',
+    details: `Owner-level recovery successfully executed using one-time server authorization secret. Previous identity: ${previousName} (${previousEmail}). All previous sessions revoked. One-time recovery authorization permanently consumed and disabled.`,
+    ip: data.ip
+  });
+
+  writeDatabase(db);
+
+  // Create fresh authenticated session for owner
+  const session = createSession(adminRecord, data.ip, 'cookie');
+
+  return {
+    user: sanitizeUser(adminRecord),
+    session
+  };
 }
 
 // ==========================================

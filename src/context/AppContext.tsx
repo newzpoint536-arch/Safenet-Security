@@ -119,6 +119,13 @@ interface AppContextType {
     recoveryPassphrase: string,
     newPassword: string
   ) => Promise<{ success: boolean; error?: string }>;
+  ownerRecoveryAdmin: (data: {
+    recoverySecret: string;
+    newEmail: string;
+    newName?: string;
+    newPassword: string;
+    newRecoveryPassphrase?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
 
   // System Notifications
   notifications: SystemNotification[];
@@ -461,6 +468,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, error: data.error || 'Password reset failed.' };
     } catch (err: any) {
       return { success: false, error: err.message || 'Password reset request failed.' };
+    }
+  };
+
+  // Owner Privilege Recovery Action
+  const ownerRecoveryAdmin = async (data: {
+    recoverySecret: string;
+    newEmail: string;
+    newName?: string;
+    newPassword: string;
+    newRecoveryPassphrase?: string;
+  }) => {
+    try {
+      const res = await fetch('/api/admin/owner-recovery', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const resData = await res.json();
+      if (res.ok && resData.success && resData.user) {
+        setAdminUser(resData.user);
+        setCsrfToken(resData.csrfToken || null);
+        setCurrentRole(resData.user.role);
+        await loadServerData();
+        showToast('Super Administrator credentials recovered successfully.');
+        return { success: true };
+      }
+      return { success: false, error: resData.error || 'Owner recovery authorization rejected.' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Owner recovery request failed.' };
     }
   };
 
@@ -966,6 +1003,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logoutAdmin,
         setupInitialSuperAdmin,
         resetAdminPassword,
+        ownerRecoveryAdmin,
         notifications,
         refreshNotifications,
         generateProposalBlueprint
