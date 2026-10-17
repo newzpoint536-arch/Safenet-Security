@@ -263,6 +263,8 @@ export interface AuditLog {
   target: string;
   details: string;
   ip: string;
+  hash?: string;
+  prevHash?: string;
 }
 
 export type AdminRole = 
@@ -292,7 +294,8 @@ export interface AdminAuthSession {
     role: AdminRole;
     lastLogin?: string;
   };
-  token: string;
+  token?: string;
+  csrfToken?: string;
   expiresAt: string;
 }
 

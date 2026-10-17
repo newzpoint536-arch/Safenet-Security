@@ -1,7 +1,29 @@
 import crypto from 'node:crypto';
+import util from 'node:util';
 import type { Request, Response, NextFunction } from 'express';
 import { readDatabase, writeDatabase } from './dbStore.js';
-import type { AdminRole } from '../types/index.js';
+import type { AdminRole, AuditLog } from '../types/index.js';
+
+const pbkdf2Async = util.promisify(crypto.pbkdf2);
+
+// OWASP 2024 guidance for PBKDF2 with SHA-512
+export const RECOMMENDED_ITERATIONS = 210000;
+export const LEGACY_ITERATIONS = 100000;
+const KEY_LENGTH = 64;
+const DIGEST = 'sha512';
+
+// Session lifetime limits
+export const SESSION_LIFETIME_MS = 8 * 60 * 60 * 1000; // 8 hours absolute limit
+export const IDLE_TIMEOUT_MS = 45 * 60 * 1000;         // 45 minutes idle limit
+
+// Rate limiting parameters
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_RECOVERY_ATTEMPTS = 3;
+const RECOVERY_LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+// Internal secret for HMAC-SHA256 audit chaining
+const AUDIT_HMAC_SECRET = process.env.AUDIT_HMAC_SECRET || 'safenet-audit-integrity-chain-key-v1';
 
 export interface AdminUserRecord {
   id: string;
@@ -10,8 +32,10 @@ export interface AdminUserRecord {
   role: AdminRole;
   salt: string;
   hash: string;
+  iterations?: number;
   recoveryPassphraseHash?: string;
   recoveryPassphraseSalt?: string;
+  recoveryPassphraseIterations?: number;
   createdAt: string;
   lastLogin?: string;
   status: 'active' | 'suspended';
@@ -19,50 +43,106 @@ export interface AdminUserRecord {
 
 export interface AdminSession {
   token: string;
+  csrfToken: string;
   userId: string;
   email: string;
   name: string;
   role: AdminRole;
   createdAt: string;
-  expiresAt: number;
+  expiresAt: number;        // Absolute expiry
+  lastActivityAt: number;   // Idle expiry tracker
   ip: string;
+  userAgent?: string;
+  authSource: 'cookie' | 'bearer';
 }
 
 // In-memory active session registry
 const activeSessions = new Map<string, AdminSession>();
 
-// In-memory rate limiting map for login attempts: key -> { attempts: number; lockedUntil: number }
-const loginRateLimits = new Map<string, { attempts: number; lockedUntil: number }>();
+// In-memory rate limiting map: key -> { attempts: number; lockedUntil: number }
+const rateLimitMap = new Map<string, { attempts: number; lockedUntil: number }>();
 
-const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
-const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
+// In-memory atomic mutex for initial provisioning
+let isProvisioningMutexLocked = false;
 
-// Cryptographic hash helper using PBKDF2 with SHA-512 and 100,000 iterations
+// ==========================================
+// 1. PASSWORD HASHING & VALIDATION (OWASP)
+// ==========================================
+
+export function validatePasswordStrength(password: string): { valid: boolean; reason?: string } {
+  if (typeof password !== 'string' || password.length < 10) {
+    return { valid: false, reason: 'Password must be at least 10 characters long.' };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, reason: 'Password must contain at least one uppercase letter (A-Z).' };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, reason: 'Password must contain at least one lowercase letter (a-z).' };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, reason: 'Password must contain at least one digit (0-9).' };
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(password)) {
+    return { valid: false, reason: 'Password must contain at least one special character (!@#$%^&*...).' };
+  }
+  return { valid: true };
+}
+
+export async function hashPasswordAsync(
+  password: string,
+  providedSalt?: string,
+  iterations = RECOMMENDED_ITERATIONS
+): Promise<{ salt: string; hash: string; iterations: number }> {
+  const salt = providedSalt || crypto.randomBytes(32).toString('hex');
+  const derivedKey = await pbkdf2Async(password, salt, iterations, KEY_LENGTH, DIGEST);
+  return { salt, hash: derivedKey.toString('hex'), iterations };
+}
+
+export async function verifyPasswordAsync(
+  password: string,
+  salt: string,
+  expectedHash: string,
+  iterations = RECOMMENDED_ITERATIONS
+): Promise<boolean> {
+  try {
+    const derivedKey = await pbkdf2Async(password, salt, iterations, KEY_LENGTH, DIGEST);
+    const derivedBuffer = Buffer.from(derivedKey.toString('hex'), 'hex');
+    const expectedBuffer = Buffer.from(expectedHash, 'hex');
+    if (derivedBuffer.length !== expectedBuffer.length) {
+      return false;
+    }
+    return crypto.timingSafeEqual(derivedBuffer, expectedBuffer);
+  } catch {
+    return false;
+  }
+}
+
+// Synchronous fallback maintained for backward compatibility
 export function hashPassword(password: string, providedSalt?: string): { salt: string; hash: string } {
   const salt = providedSalt || crypto.randomBytes(32).toString('hex');
-  const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, RECOMMENDED_ITERATIONS, KEY_LENGTH, DIGEST).toString('hex');
   return { salt, hash };
 }
 
 export function verifyPassword(password: string, salt: string, expectedHash: string): boolean {
   try {
-    const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+    const hash = crypto.pbkdf2Sync(password, salt, RECOMMENDED_ITERATIONS, KEY_LENGTH, DIGEST).toString('hex');
     const hashBuffer = Buffer.from(hash, 'hex');
     const expectedBuffer = Buffer.from(expectedHash, 'hex');
-    if (hashBuffer.length !== expectedBuffer.length) {
-      return false;
-    }
+    if (hashBuffer.length !== expectedBuffer.length) return false;
     return crypto.timingSafeEqual(hashBuffer, expectedBuffer);
   } catch {
     return false;
   }
 }
 
-// Rate limit checker
+// ==========================================
+// 2. RATE LIMITING
+// ==========================================
+
 export function checkRateLimit(key: string): { allowed: boolean; remainingMinutes?: number } {
   const now = Date.now();
-  const record = loginRateLimits.get(key);
+  const record = rateLimitMap.get(key);
   if (!record) return { allowed: true };
 
   if (record.lockedUntil > now) {
@@ -70,41 +150,94 @@ export function checkRateLimit(key: string): { allowed: boolean; remainingMinute
     return { allowed: false, remainingMinutes };
   }
 
-  // Lockout expired, reset
   if (record.lockedUntil > 0 && record.lockedUntil <= now) {
-    loginRateLimits.delete(key);
+    rateLimitMap.delete(key);
     return { allowed: true };
   }
 
   return { allowed: true };
 }
 
-export function recordFailedAttempt(key: string): { locked: boolean; attemptsLeft: number; remainingMinutes?: number } {
+export function recordFailedAttempt(
+  key: string,
+  maxAttempts = MAX_LOGIN_ATTEMPTS,
+  lockoutDurationMs = LOGIN_LOCKOUT_MS
+): { locked: boolean; attemptsLeft: number; remainingMinutes?: number } {
   const now = Date.now();
-  const record = loginRateLimits.get(key) || { attempts: 0, lockedUntil: 0 };
+  const record = rateLimitMap.get(key) || { attempts: 0, lockedUntil: 0 };
   record.attempts += 1;
 
-  if (record.attempts >= MAX_FAILED_ATTEMPTS) {
-    record.lockedUntil = now + LOCKOUT_DURATION_MS;
-    loginRateLimits.set(key, record);
-    return { locked: true, attemptsLeft: 0, remainingMinutes: 15 };
+  if (record.attempts >= maxAttempts) {
+    record.lockedUntil = now + lockoutDurationMs;
+    rateLimitMap.set(key, record);
+    return { locked: true, attemptsLeft: 0, remainingMinutes: Math.ceil(lockoutDurationMs / 60000) };
   }
 
-  loginRateLimits.set(key, record);
-  return { locked: false, attemptsLeft: MAX_FAILED_ATTEMPTS - record.attempts };
+  rateLimitMap.set(key, record);
+  return { locked: false, attemptsLeft: maxAttempts - record.attempts };
 }
 
 export function clearRateLimit(key: string) {
-  loginRateLimits.delete(key);
+  rateLimitMap.delete(key);
 }
 
-// Check if any Super Admin or admin accounts exist in storage
+// ==========================================
+// 3. TAMPER-EVIDENT AUDIT LOGGING WITH HMAC
+// ==========================================
+
+export function appendTamperEvidentAuditLog(
+  db: any,
+  entry: {
+    user: string;
+    action: string;
+    target: string;
+    details: string;
+    ip: string;
+  }
+): AuditLog {
+  if (!Array.isArray(db.auditLogs)) {
+    db.auditLogs = [];
+  }
+
+  const prevLog = db.auditLogs[0];
+  const prevHash = prevLog?.hash || 'GENESIS-SAFENET-SECURE-ANCHOR-000';
+  const timestamp = new Date().toISOString();
+  const id = `audit-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const logPayload = `${prevHash}:${id}:${timestamp}:${entry.user}:${entry.action}:${entry.target}:${entry.details}:${entry.ip}`;
+  const hash = crypto.createHmac('sha256', AUDIT_HMAC_SECRET).update(logPayload).digest('hex');
+
+  const newLog: AuditLog = {
+    id,
+    timestamp,
+    user: entry.user,
+    action: entry.action,
+    target: entry.target,
+    details: entry.details,
+    ip: entry.ip,
+    hash,
+    prevHash
+  };
+
+  db.auditLogs.unshift(newLog);
+
+  // Retain up to 250 verified historical logs
+  if (db.auditLogs.length > 250) {
+    db.auditLogs = db.auditLogs.slice(0, 250);
+  }
+
+  return newLog;
+}
+
+// ==========================================
+// 4. USER SANITIZATION & STATE QUERIES
+// ==========================================
+
 export function hasAdminUsers(): boolean {
   const db = readDatabase();
   return Boolean(db && Array.isArray(db.adminUsers) && db.adminUsers.length > 0);
 }
 
-// Retrieve sanitized user object
 export function sanitizeUser(user: AdminUserRecord) {
   return {
     id: user.id,
@@ -117,112 +250,133 @@ export function sanitizeUser(user: AdminUserRecord) {
   };
 }
 
-// Initial Admin Provisioning
-export function createInitialSuperAdmin(data: {
+// ==========================================
+// 5. INITIAL SUPER ADMINISTRATOR PROVISIONING
+// ==========================================
+
+export function isSetupKeyRequired(): boolean {
+  return Boolean(process.env.INITIAL_SETUP_KEY && process.env.INITIAL_SETUP_KEY.trim().length > 0);
+}
+
+export async function createInitialSuperAdmin(data: {
   name: string;
   email: string;
   password: string;
   recoveryPassphrase?: string;
+  setupKey?: string;
   ip: string;
-}): { user: ReturnType<typeof sanitizeUser>; token: string; expiresAt: string } {
-  const db = readDatabase();
-  if (!db) {
-    throw new Error('Database is unavailable');
+}): Promise<{ user: ReturnType<typeof sanitizeUser>; session: AdminSession }> {
+  // Enforce atomic provisioning mutex
+  if (isProvisioningMutexLocked) {
+    throw new Error('Provisioning operation in progress by another request.');
   }
 
-  const existingUsers = Array.isArray(db.adminUsers) ? db.adminUsers : [];
-  if (existingUsers.length > 0) {
-    throw new Error('System setup is already completed. Initial provisioning is locked.');
-  }
+  isProvisioningMutexLocked = true;
+  try {
+    const db = readDatabase();
+    if (!db) {
+      throw new Error('Database service is unavailable.');
+    }
 
-  const email = data.email.trim().toLowerCase();
-  const name = data.name.trim();
+    const existingUsers = Array.isArray(db.adminUsers) ? db.adminUsers : [];
+    if (existingUsers.length > 0) {
+      throw new Error('System setup is already completed. Initial provisioning is permanently locked.');
+    }
 
-  if (!email || !name || !data.password) {
-    throw new Error('Full Name, Email, and Password are required.');
-  }
+    // Check protected one-time setup authorization mechanism if configured
+    if (isSetupKeyRequired()) {
+      const requiredKey = (process.env.INITIAL_SETUP_KEY || '').trim();
+      const providedKey = (data.setupKey || '').trim();
+      if (!providedKey || providedKey !== requiredKey) {
+        throw new Error('Invalid or missing Initial Setup Authorization Key. Contact systems administrator.');
+      }
+    }
 
-  if (data.password.length < 8) {
-    throw new Error('Password must be at least 8 characters long.');
-  }
+    const email = data.email.trim().toLowerCase();
+    const name = data.name.trim();
 
-  const { salt, hash } = hashPassword(data.password);
+    if (!email || !name || !data.password) {
+      throw new Error('Full Name, Email, and Password are required.');
+    }
 
-  let recoveryPassphraseHash: string | undefined;
-  let recoveryPassphraseSalt: string | undefined;
-  if (data.recoveryPassphrase && data.recoveryPassphrase.trim().length >= 8) {
-    const rec = hashPassword(data.recoveryPassphrase.trim());
-    recoveryPassphraseHash = rec.hash;
-    recoveryPassphraseSalt = rec.salt;
-  }
+    // OWASP password strength validation
+    const strength = validatePasswordStrength(data.password);
+    if (!strength.valid) {
+      throw new Error(strength.reason || 'Password does not meet enterprise security requirements.');
+    }
 
-  const newUser: AdminUserRecord = {
-    id: `admin-${Date.now()}`,
-    name,
-    email,
-    role: 'super_admin',
-    salt,
-    hash,
-    recoveryPassphraseHash,
-    recoveryPassphraseSalt,
-    createdAt: new Date().toISOString(),
-    lastLogin: new Date().toISOString(),
-    status: 'active'
-  };
+    // Asynchronous PBKDF2 hashing with 210,000 iterations
+    const { salt, hash, iterations } = await hashPasswordAsync(data.password, undefined, RECOMMENDED_ITERATIONS);
 
-  db.adminUsers = [newUser];
+    let recoveryPassphraseHash: string | undefined;
+    let recoveryPassphraseSalt: string | undefined;
+    let recoveryPassphraseIterations: number | undefined;
 
-  // Log to audit log
-  if (Array.isArray(db.auditLogs)) {
-    db.auditLogs.unshift({
-      id: `audit-${Date.now()}`,
-      timestamp: new Date().toISOString(),
+    if (data.recoveryPassphrase && data.recoveryPassphrase.trim().length >= 10) {
+      const rec = await hashPasswordAsync(data.recoveryPassphrase.trim(), undefined, RECOMMENDED_ITERATIONS);
+      recoveryPassphraseHash = rec.hash;
+      recoveryPassphraseSalt = rec.salt;
+      recoveryPassphraseIterations = rec.iterations;
+    }
+
+    const newUser: AdminUserRecord = {
+      id: `admin-${Date.now()}`,
+      name,
+      email,
+      role: 'super_admin',
+      salt,
+      hash,
+      iterations,
+      recoveryPassphraseHash,
+      recoveryPassphraseSalt,
+      recoveryPassphraseIterations,
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+      status: 'active'
+    };
+
+    db.adminUsers = [newUser];
+
+    // Record tamper-evident audit log
+    appendTamperEvidentAuditLog(db, {
       user: `${name} (${email})`,
-      action: 'ADMIN_PROVISIONED',
-      target: 'System Security Core',
-      details: 'First Super Administrator account securely provisioned with PBKDF2-SHA512 encryption.',
+      action: 'INITIAL_PROVISIONING',
+      target: 'Core Administrative Identity',
+      details: `First Super Administrator provisioned using PBKDF2-SHA512 (${iterations.toLocaleString()} iterations). Initial setup permanently locked.`,
       ip: data.ip
     });
+
+    writeDatabase(db);
+
+    // Create session with CSRF protection and rotation
+    const session = createSession(newUser, data.ip, 'cookie');
+
+    return {
+      user: sanitizeUser(newUser),
+      session
+    };
+  } finally {
+    isProvisioningMutexLocked = false;
   }
-
-  writeDatabase(db);
-
-  // Create session
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiresAtMs = Date.now() + SESSION_DURATION_MS;
-  const session: AdminSession = {
-    token,
-    userId: newUser.id,
-    email: newUser.email,
-    name: newUser.name,
-    role: newUser.role,
-    createdAt: new Date().toISOString(),
-    expiresAt: expiresAtMs,
-    ip: data.ip
-  };
-
-  activeSessions.set(token, session);
-
-  return {
-    user: sanitizeUser(newUser),
-    token,
-    expiresAt: new Date(expiresAtMs).toISOString()
-  };
 }
 
-// Authenticate Administrator
-export function loginAdministrator(
+// ==========================================
+// 6. ADMINISTRATOR AUTHENTICATION (LOGIN)
+// ==========================================
+
+export async function loginAdministrator(
   emailInput: string,
   passwordInput: string,
-  ip: string
-): { user: ReturnType<typeof sanitizeUser>; token: string; expiresAt: string } {
+  ip: string,
+  userAgent?: string
+): Promise<{ user: ReturnType<typeof sanitizeUser>; session: AdminSession }> {
   const db = readDatabase();
   if (!db) {
     throw new Error('Database service unavailable.');
   }
 
   const email = emailInput.trim().toLowerCase();
-  const rateLimitKey = `${ip}:${email}`;
+  const rateLimitKey = `login:${ip}:${email}`;
 
   const rateCheck = checkRateLimit(rateLimitKey);
   if (!rateCheck.allowed) {
@@ -235,163 +389,326 @@ export function loginAdministrator(
   const user = users.find(u => u.email.toLowerCase() === email);
 
   if (!user || user.status === 'suspended') {
-    const { attemptsLeft, locked } = recordFailedAttempt(rateLimitKey);
-    if (locked) {
-      throw new Error('Maximum login attempts exceeded. Account access locked for 15 minutes.');
-    }
-    throw new Error(`Invalid authentication credentials. ${attemptsLeft} attempt(s) remaining.`);
-  }
-
-  const isMatch = verifyPassword(passwordInput, user.salt, user.hash);
-  if (!isMatch) {
-    const { attemptsLeft, locked } = recordFailedAttempt(rateLimitKey);
-    if (locked) {
-      throw new Error('Maximum login attempts exceeded. Account access locked for 15 minutes.');
-    }
-    throw new Error(`Invalid authentication credentials. ${attemptsLeft} attempt(s) remaining.`);
-  }
-
-  // Clear failed attempt record on successful login
-  clearRateLimit(rateLimitKey);
-
-  // Update user last login
-  user.lastLogin = new Date().toISOString();
-  writeDatabase(db);
-
-  // Record audit log
-  if (Array.isArray(db.auditLogs)) {
-    db.auditLogs.unshift({
-      id: `audit-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      user: `${user.name} (${user.email})`,
-      action: 'ADMIN_LOGIN_SUCCESS',
-      target: 'Operations Command Console',
-      details: `Successful authenticated session started with role [${user.role}].`,
+    const { attemptsLeft, locked } = recordFailedAttempt(rateLimitKey, MAX_LOGIN_ATTEMPTS, LOGIN_LOCKOUT_MS);
+    appendTamperEvidentAuditLog(db, {
+      user: email,
+      action: 'LOGIN_FAILURE_UNKNOWN_USER',
+      target: 'Auth Gateway',
+      details: `Failed authentication attempt for non-existent or suspended account. ${attemptsLeft} attempts remaining.`,
       ip
     });
-    // Keep max 200 audit logs
-    if (db.auditLogs.length > 200) {
-      db.auditLogs = db.auditLogs.slice(0, 200);
-    }
     writeDatabase(db);
+
+    if (locked) {
+      throw new Error('Maximum login attempts exceeded. Access locked for 15 minutes.');
+    }
+    throw new Error(`Invalid authentication credentials. ${attemptsLeft} attempt(s) remaining.`);
   }
 
-  // Generate session token
+  // Determine iterations (backward compatibility: defaults to LEGACY 100,000 if not set, or RECOMMENDED 210,000)
+  const storedIterations = user.iterations || LEGACY_ITERATIONS;
+
+  // Verify password asynchronously with timing-safe comparison
+  let isMatch = await verifyPasswordAsync(passwordInput, user.salt, user.hash, storedIterations);
+
+  // If failed and storedIterations was 210,000, attempt fallback to legacy 100,000 for seamless migration
+  let needsUpgrade = false;
+  if (!isMatch && storedIterations !== LEGACY_ITERATIONS) {
+    isMatch = await verifyPasswordAsync(passwordInput, user.salt, user.hash, LEGACY_ITERATIONS);
+    if (isMatch) {
+      needsUpgrade = true;
+    }
+  } else if (isMatch && storedIterations < RECOMMENDED_ITERATIONS) {
+    needsUpgrade = true;
+  }
+
+  if (!isMatch) {
+    const { attemptsLeft, locked } = recordFailedAttempt(rateLimitKey, MAX_LOGIN_ATTEMPTS, LOGIN_LOCKOUT_MS);
+    appendTamperEvidentAuditLog(db, {
+      user: `${user.name} (${user.email})`,
+      action: 'LOGIN_FAILURE_BAD_PASSWORD',
+      target: 'Auth Gateway',
+      details: `Incorrect password supplied. ${attemptsLeft} attempts remaining before lockout.`,
+      ip
+    });
+    writeDatabase(db);
+
+    if (locked) {
+      throw new Error('Maximum login attempts exceeded. Access locked for 15 minutes.');
+    }
+    throw new Error(`Invalid authentication credentials. ${attemptsLeft} attempt(s) remaining.`);
+  }
+
+  // Clear rate limits upon successful credential verification
+  clearRateLimit(rateLimitKey);
+
+  // Automated backward-compatible hash upgrade to 210,000 iterations on login
+  if (needsUpgrade) {
+    const upgraded = await hashPasswordAsync(passwordInput, user.salt, RECOMMENDED_ITERATIONS);
+    user.hash = upgraded.hash;
+    user.iterations = RECOMMENDED_ITERATIONS;
+    appendTamperEvidentAuditLog(db, {
+      user: `${user.name} (${user.email})`,
+      action: 'SECURITY_HASH_UPGRADED',
+      target: 'Credential Storage',
+      details: `Password hash transparently upgraded to OWASP standard (${RECOMMENDED_ITERATIONS.toLocaleString()} iterations PBKDF2-SHA512).`,
+      ip
+    });
+  }
+
+  // Update last login
+  user.lastLogin = new Date().toISOString();
+
+  appendTamperEvidentAuditLog(db, {
+    user: `${user.name} (${user.email})`,
+    action: 'ADMIN_LOGIN_SUCCESS',
+    target: 'Operations Command Console',
+    details: `Authenticated with role [${user.role}]. Session established.`,
+    ip
+  });
+
+  writeDatabase(db);
+
+  // Create rotated session with unique CSRF secret
+  const session = createSession(user, ip, 'cookie', userAgent);
+
+  return {
+    user: sanitizeUser(user),
+    session
+  };
+}
+
+// ==========================================
+// 7. SESSION CREATION, ROTATION & REVOCATION
+// ==========================================
+
+export function createSession(
+  user: AdminUserRecord,
+  ip: string,
+  authSource: 'cookie' | 'bearer' = 'cookie',
+  userAgent?: string
+): AdminSession {
+  // Generate 256-bit cryptographically secure session and CSRF tokens
   const token = crypto.randomBytes(32).toString('hex');
-  const expiresAtMs = Date.now() + SESSION_DURATION_MS;
+  const csrfToken = crypto.randomBytes(32).toString('hex');
+  const now = Date.now();
 
   const session: AdminSession = {
     token,
+    csrfToken,
     userId: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
-    createdAt: new Date().toISOString(),
-    expiresAt: expiresAtMs,
-    ip
+    createdAt: new Date(now).toISOString(),
+    expiresAt: now + SESSION_LIFETIME_MS,
+    lastActivityAt: now,
+    ip,
+    userAgent,
+    authSource
   };
 
   activeSessions.set(token, session);
-
-  return {
-    user: sanitizeUser(user),
-    token,
-    expiresAt: new Date(expiresAtMs).toISOString()
-  };
+  return session;
 }
 
-// Verify Session Token
 export function verifySessionToken(token: string | undefined): AdminSession | null {
   if (!token) return null;
   const session = activeSessions.get(token);
   if (!session) return null;
 
-  if (Date.now() > session.expiresAt) {
+  const now = Date.now();
+
+  // 1. Check absolute session expiration (8 hours)
+  if (now > session.expiresAt) {
     activeSessions.delete(token);
     return null;
   }
 
+  // 2. Check idle session timeout (45 minutes)
+  if (now - session.lastActivityAt > IDLE_TIMEOUT_MS) {
+    activeSessions.delete(token);
+    return null;
+  }
+
+  // Refresh idle activity tracker
+  session.lastActivityAt = now;
   return session;
 }
 
-// Invalidate Session (Logout)
 export function logoutSession(token: string | undefined) {
   if (token) {
     activeSessions.delete(token);
   }
 }
 
-// Password Reset via Recovery Passphrase
-export function resetPasswordWithPassphrase(
+export function invalidateAllUserSessions(userId: string) {
+  for (const [token, sess] of activeSessions.entries()) {
+    if (sess.userId === userId) {
+      activeSessions.delete(token);
+    }
+  }
+}
+
+// ==========================================
+// 8. EMERGENCY CREDENTIAL RECOVERY
+// ==========================================
+
+export async function resetPasswordWithPassphrase(
   emailInput: string,
   recoveryPassphrase: string,
   newPassword: string,
   ip: string
-): boolean {
+): Promise<boolean> {
   const db = readDatabase();
   if (!db) throw new Error('Database service unavailable.');
 
   const email = emailInput.trim().toLowerCase();
+  const rateLimitKey = `recovery:${ip}:${email}`;
+
+  const rateCheck = checkRateLimit(rateLimitKey);
+  if (!rateCheck.allowed) {
+    throw new Error(
+      `Emergency recovery locked due to multiple failed attempts. Please retry in ${rateCheck.remainingMinutes} minutes.`
+    );
+  }
+
   const users: AdminUserRecord[] = Array.isArray(db.adminUsers) ? db.adminUsers : [];
   const user = users.find(u => u.email.toLowerCase() === email);
 
   if (!user || !user.recoveryPassphraseHash || !user.recoveryPassphraseSalt) {
-    throw new Error('Recovery passphrase is not configured or user not found.');
-  }
-
-  const isPassphraseValid = verifyPassword(
-    recoveryPassphrase.trim(),
-    user.recoveryPassphraseSalt,
-    user.recoveryPassphraseHash
-  );
-
-  if (!isPassphraseValid) {
-    throw new Error('Invalid recovery passphrase.');
-  }
-
-  if (newPassword.length < 8) {
-    throw new Error('New password must be at least 8 characters long.');
-  }
-
-  const { salt, hash } = hashPassword(newPassword);
-  user.salt = salt;
-  user.hash = hash;
-  writeDatabase(db);
-
-  // Invalidate any active sessions for this user
-  for (const [token, sess] of activeSessions.entries()) {
-    if (sess.userId === user.id) {
-      activeSessions.delete(token);
-    }
-  }
-
-  // Log password reset
-  if (Array.isArray(db.auditLogs)) {
-    db.auditLogs.unshift({
-      id: `audit-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      user: `${user.name} (${user.email})`,
-      action: 'PASSWORD_RESET_PASSPHRASE',
-      target: 'Admin Security Credentials',
-      details: 'Password was securely updated using the cryptographic recovery passphrase.',
+    recordFailedAttempt(rateLimitKey, MAX_RECOVERY_ATTEMPTS, RECOVERY_LOCKOUT_MS);
+    appendTamperEvidentAuditLog(db, {
+      user: email,
+      action: 'RECOVERY_FAILURE_INVALID_ACCOUNT',
+      target: 'Emergency Recovery Key',
+      details: 'Recovery attempt submitted for account without configured recovery key.',
       ip
     });
     writeDatabase(db);
+    throw new Error('Recovery passphrase is not configured or user was not found.');
   }
 
+  // Verify recovery passphrase asynchronously
+  const recIterations = user.recoveryPassphraseIterations || RECOMMENDED_ITERATIONS;
+  let isPassphraseValid = await verifyPasswordAsync(
+    recoveryPassphrase.trim(),
+    user.recoveryPassphraseSalt,
+    user.recoveryPassphraseHash,
+    recIterations
+  );
+
+  if (!isPassphraseValid && recIterations !== LEGACY_ITERATIONS) {
+    // Legacy fallback check
+    isPassphraseValid = await verifyPasswordAsync(
+      recoveryPassphrase.trim(),
+      user.recoveryPassphraseSalt,
+      user.recoveryPassphraseHash,
+      LEGACY_ITERATIONS
+    );
+  }
+
+  if (!isPassphraseValid) {
+    const { attemptsLeft, locked } = recordFailedAttempt(rateLimitKey, MAX_RECOVERY_ATTEMPTS, RECOVERY_LOCKOUT_MS);
+    appendTamperEvidentAuditLog(db, {
+      user: `${user.name} (${user.email})`,
+      action: 'RECOVERY_FAILURE_BAD_PASSPHRASE',
+      target: 'Emergency Recovery Key',
+      details: `Invalid recovery passphrase supplied. ${attemptsLeft} attempt(s) remaining.`,
+      ip
+    });
+    writeDatabase(db);
+
+    if (locked) {
+      throw new Error('Maximum recovery attempts exceeded. Recovery locked for 30 minutes.');
+    }
+    throw new Error(`Invalid recovery passphrase. ${attemptsLeft} attempt(s) remaining.`);
+  }
+
+  // Validate new password strength
+  const strength = validatePasswordStrength(newPassword);
+  if (!strength.valid) {
+    throw new Error(strength.reason || 'New password does not meet security requirements.');
+  }
+
+  // Hash new password with 210,000 iterations
+  const { salt, hash, iterations } = await hashPasswordAsync(newPassword, undefined, RECOMMENDED_ITERATIONS);
+  user.salt = salt;
+  user.hash = hash;
+  user.iterations = iterations;
+
+  // Clear rate limits
+  clearRateLimit(rateLimitKey);
+
+  // Invalidate all existing sessions for this user (session revocation)
+  invalidateAllUserSessions(user.id);
+
+  // Audit log
+  appendTamperEvidentAuditLog(db, {
+    user: `${user.name} (${user.email})`,
+    action: 'PASSWORD_RESET_EMERGENCY_RECOVERY',
+    target: 'Credential Store',
+    details: 'Master password reset via emergency recovery passphrase. All existing active sessions revoked.',
+    ip
+  });
+
+  writeDatabase(db);
   return true;
 }
 
-// Express Middleware for backend-enforced RBAC
+// ==========================================
+// 9. EXPRESS COOKIE & CSRF HELPERS
+// ==========================================
+
+export function setSessionCookies(res: Response, session: AdminSession, req: Request) {
+  const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https' || process.env.NODE_ENV === 'production';
+
+  // 1. HttpOnly, Secure, SameSite=Lax Session Cookie
+  res.cookie('safenet_session', session.token, {
+    httpOnly: true,
+    secure: isHttps,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: SESSION_LIFETIME_MS
+  });
+
+  // 2. Client-Accessible Anti-CSRF Token Cookie
+  res.cookie('safenet_csrf', session.csrfToken, {
+    httpOnly: false, // Frontend reads this to include in X-CSRF-Token header
+    secure: isHttps,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: SESSION_LIFETIME_MS
+  });
+}
+
+export function clearSessionCookies(res: Response) {
+  res.clearCookie('safenet_session', { path: '/' });
+  res.clearCookie('safenet_csrf', { path: '/' });
+}
+
+// ==========================================
+// 10. BACKEND-ENFORCED RBAC & CSRF MIDDLEWARE
+// ==========================================
+
 export function requireAdminAuth(allowedRoles?: AdminRole[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
     let token: string | undefined;
+    let authSource: 'cookie' | 'bearer' = 'cookie';
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7).trim();
-    } else if (req.headers['x-admin-token']) {
+    // 1. Check HttpOnly cookie
+    if (req.cookies && req.cookies.safenet_session) {
+      token = req.cookies.safenet_session;
+      authSource = 'cookie';
+    }
+
+    // 2. Fallback to Authorization: Bearer <token>
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.substring(7).trim();
+      authSource = 'bearer';
+    } else if (!token && req.headers['x-admin-token']) {
       token = String(req.headers['x-admin-token']).trim();
+      authSource = 'bearer';
     }
 
     const session = verifySessionToken(token);
@@ -402,11 +719,24 @@ export function requireAdminAuth(allowedRoles?: AdminRole[]) {
       });
     }
 
+    // CSRF Protection for state-mutating requests (POST, PUT, DELETE, PATCH)
+    // Only required when authenticated via cookies (Bearer tokens are immune to ambient browser CSRF)
+    const mutatingMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
+    if (authSource === 'cookie' && mutatingMethods.includes(req.method.toUpperCase())) {
+      const clientCsrfToken = req.headers['x-csrf-token'] || req.body?._csrf;
+      if (!clientCsrfToken || clientCsrfToken !== session.csrfToken) {
+        return res.status(403).json({
+          error: 'Forbidden: Invalid or missing anti-CSRF verification token.',
+          code: 'CSRF_VALIDATION_FAILED'
+        });
+      }
+    }
+
     // Role check: super_admin always has access
     if (allowedRoles && allowedRoles.length > 0) {
       if (session.role !== 'super_admin' && !allowedRoles.includes(session.role)) {
         return res.status(403).json({
-          error: `Forbidden: Current role '${session.role}' lacks permissions for this command endpoint.`,
+          error: `Forbidden: Current role '${session.role}' lacks permission for this administrative endpoint.`,
           requiredRoles: allowedRoles,
           code: 'INSUFFICIENT_PERMISSIONS'
         });
@@ -415,6 +745,13 @@ export function requireAdminAuth(allowedRoles?: AdminRole[]) {
 
     // Attach to request
     (req as any).adminSession = session;
+    (req as any).adminUser = {
+      id: session.userId,
+      email: session.email,
+      name: session.name,
+      role: session.role
+    };
+
     next();
   };
 }

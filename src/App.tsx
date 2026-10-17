@@ -139,6 +139,10 @@ const RouterContent: React.FC = () => {
 
     // Admin Dedicated Login
     if (cleanPath === '/admin/login') {
+      if (isAdminAuthenticated) {
+        setTimeout(() => navigate('/admin/dashboard'), 0);
+        return null;
+      }
       return <AdminLoginPage />;
     }
 
@@ -156,7 +160,13 @@ const RouterContent: React.FC = () => {
       }
 
       if (!isAdminAuthenticated) {
+        setTimeout(() => navigate('/admin/login'), 0);
         return <AdminLoginPage />;
+      }
+
+      // If accessing /admin while authenticated, redirect URL to /admin/dashboard
+      if (cleanPath === '/admin') {
+        setTimeout(() => navigate('/admin/dashboard'), 0);
       }
 
       return <AdminCommandCentre />;

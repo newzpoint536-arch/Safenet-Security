@@ -29,6 +29,7 @@ export const AdminLoginPage: React.FC = () => {
   // Status check for initial provisioning
   const [checkingSetup, setCheckingSetup] = useState(true);
   const [isSetupCompleted, setIsSetupCompleted] = useState<boolean>(true);
+  const [setupKeyRequired, setSetupKeyRequired] = useState<boolean>(false);
   
   // Login Form State
   const [email, setEmail] = useState('');
@@ -43,6 +44,7 @@ export const AdminLoginPage: React.FC = () => {
   const [setupPassword, setSetupPassword] = useState('');
   const [setupConfirmPassword, setSetupConfirmPassword] = useState('');
   const [setupRecoveryPassphrase, setSetupRecoveryPassphrase] = useState('');
+  const [setupKey, setSetupKey] = useState('');
   const [showSetupPassword, setShowSetupPassword] = useState(false);
   const [setupSuccess, setSetupSuccess] = useState(false);
 
@@ -69,6 +71,7 @@ export const AdminLoginPage: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           setIsSetupCompleted(Boolean(data.isSetup));
+          setSetupKeyRequired(Boolean(data.setupKeyRequired));
         }
       } catch (err) {
         console.warn('Failed to verify admin setup status:', err);
@@ -78,6 +81,18 @@ export const AdminLoginPage: React.FC = () => {
     }
     checkStatus();
   }, []);
+
+  // Password complexity helper
+  const checkPasswordComplexity = (pwd: string): { valid: boolean; reason?: string } => {
+    if (pwd.length < 10) return { valid: false, reason: 'Password must be at least 10 characters long.' };
+    if (!/[A-Z]/.test(pwd)) return { valid: false, reason: 'Must contain at least one uppercase letter (A-Z).' };
+    if (!/[a-z]/.test(pwd)) return { valid: false, reason: 'Must contain at least one lowercase letter (a-z).' };
+    if (!/[0-9]/.test(pwd)) return { valid: false, reason: 'Must contain at least one numeric digit (0-9).' };
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(pwd)) {
+      return { valid: false, reason: 'Must contain at least one special character (!@#$%^&*...).' };
+    }
+    return { valid: true };
+  };
 
   // Handle Administrator Login
   const handleLogin = async (e: React.FormEvent) => {
@@ -114,8 +129,14 @@ export const AdminLoginPage: React.FC = () => {
       return;
     }
 
-    if (setupPassword.length < 8) {
-      setErrorMessage('Master password must be at least 8 characters long.');
+    if (setupKeyRequired && !setupKey.trim()) {
+      setErrorMessage('System environment requires a valid Initial Setup Authorization Key.');
+      return;
+    }
+
+    const complexity = checkPasswordComplexity(setupPassword);
+    if (!complexity.valid) {
+      setErrorMessage(complexity.reason || 'Master password does not meet enterprise security requirements.');
       return;
     }
 
@@ -124,8 +145,8 @@ export const AdminLoginPage: React.FC = () => {
       return;
     }
 
-    if (setupRecoveryPassphrase && setupRecoveryPassphrase.length < 8) {
-      setErrorMessage('Emergency recovery passphrase must be at least 8 characters if provided.');
+    if (setupRecoveryPassphrase && setupRecoveryPassphrase.length < 10) {
+      setErrorMessage('Emergency recovery passphrase must be at least 10 characters if provided.');
       return;
     }
 
@@ -135,7 +156,8 @@ export const AdminLoginPage: React.FC = () => {
         name: setupName,
         email: setupEmail,
         password: setupPassword,
-        recoveryPassphrase: setupRecoveryPassphrase || undefined
+        recoveryPassphrase: setupRecoveryPassphrase || undefined,
+        setupKey: setupKey ? setupKey.trim() : undefined
       });
 
       if (result.success) {
@@ -164,8 +186,9 @@ export const AdminLoginPage: React.FC = () => {
       return;
     }
 
-    if (recoveryNewPassword.length < 8) {
-      setRecoveryMessage({ type: 'error', text: 'New password must be at least 8 characters.' });
+    const complexity = checkPasswordComplexity(recoveryNewPassword);
+    if (!complexity.valid) {
+      setRecoveryMessage({ type: 'error', text: complexity.reason || 'New password does not meet security requirements.' });
       return;
     }
 
@@ -299,17 +322,40 @@ export const AdminLoginPage: React.FC = () => {
                       />
                     </div>
 
+                    {setupKeyRequired && (
+                      <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-1.5">
+                        <label className="block text-xs font-semibold text-amber-300 flex items-center gap-1.5">
+                          <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Initial Setup Authorization Key</span>
+                        </label>
+                        <p className="text-[10px] text-slate-400 leading-tight">
+                          This deployment is protected by a server environment authorization key (INITIAL_SETUP_KEY).
+                        </p>
+                        <input
+                          type="password"
+                          required
+                          value={setupKey}
+                          onChange={(e) => setSetupKey(e.target.value)}
+                          placeholder="Enter authorization key..."
+                          className="w-full bg-slate-950 border border-amber-500/40 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+                    )}
+
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
-                        Master Passphrase (Min. 8 characters)
-                      </label>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs font-medium text-slate-300">
+                          Master Passphrase
+                        </label>
+                        <span className="text-[10px] text-amber-400 font-mono">OWASP Standard</span>
+                      </div>
                       <div className="relative">
                         <input
                           type={showSetupPassword ? 'text' : 'password'}
                           required
                           value={setupPassword}
                           onChange={(e) => setSetupPassword(e.target.value)}
-                          placeholder="••••••••••••"
+                          placeholder="Min. 10 chars (A-Z, a-z, 0-9, symbol)"
                           className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 pr-9 text-xs text-white focus:outline-none focus:border-amber-400"
                         />
                         <button
@@ -320,6 +366,9 @@ export const AdminLoginPage: React.FC = () => {
                           {showSetupPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                         </button>
                       </div>
+                      <p className="mt-1 text-[10px] text-slate-400">
+                        Must contain at least 10 characters, uppercase, lowercase, number, and symbol.
+                      </p>
                     </div>
 
                     <div>
@@ -331,7 +380,7 @@ export const AdminLoginPage: React.FC = () => {
                         required
                         value={setupConfirmPassword}
                         onChange={(e) => setSetupConfirmPassword(e.target.value)}
-                        placeholder="••••••••••••"
+                        placeholder="Re-enter master passphrase"
                         className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
                       />
                     </div>
@@ -339,9 +388,9 @@ export const AdminLoginPage: React.FC = () => {
                     <div>
                       <div className="flex justify-between items-center mb-1">
                         <label className="block text-xs font-medium text-slate-300">
-                          Emergency Recovery Passphrase (Optional)
+                          Emergency Recovery Passphrase (Recommended)
                         </label>
-                        <span className="text-[10px] text-slate-400">Used for credential reset</span>
+                        <span className="text-[10px] text-slate-400">Min. 10 chars</span>
                       </div>
                       <input
                         type="text"
@@ -350,6 +399,9 @@ export const AdminLoginPage: React.FC = () => {
                         placeholder="e.g., Tactical-Recovery-Alpha-2026"
                         className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-amber-400"
                       />
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        Stored via PBKDF2-SHA512 with cryptographic salt. Used exclusively for emergency credential recovery.
+                      </p>
                     </div>
 
                     <div className="pt-2">
@@ -519,13 +571,13 @@ export const AdminLoginPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">New Master Password (Min 8 chars)</label>
+                <label className="block text-slate-300 mb-1">New Master Passphrase (Min. 10 chars, A-Z, a-z, 0-9, symbol)</label>
                 <input
                   type="password"
                   required
                   value={recoveryNewPassword}
                   onChange={(e) => setRecoveryNewPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder="Min. 10 chars with complexity"
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-400"
                 />
               </div>

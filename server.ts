@@ -1,4 +1,5 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -6,13 +7,19 @@ import { GoogleGenAI } from '@google/genai';
 import { readDatabase, writeDatabase, getDatabaseHealth } from './src/server/dbStore.js';
 import {
   hasAdminUsers,
+  isSetupKeyRequired,
   createInitialSuperAdmin,
   loginAdministrator,
   verifySessionToken,
   logoutSession,
   resetPasswordWithPassphrase,
   requireAdminAuth,
-  sanitizeUser
+  sanitizeUser,
+  setSessionCookies,
+  clearSessionCookies,
+  appendTamperEvidentAuditLog,
+  hashPasswordAsync,
+  RECOMMENDED_ITERATIONS
 } from './src/server/auth.js';
 
 dotenv.config();
@@ -24,6 +31,7 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '5mb' }));
+app.use(cookieParser());
 
 // Initialize GenAI Client using process.env.GEMINI_API_KEY
 const apiKey = process.env.GEMINI_API_KEY || '';
@@ -216,10 +224,11 @@ app.get('/api/db/state', (req, res) => {
       return res.json({ seeded: false, data: null });
     }
 
-    const authHeader = req.headers.authorization;
     let token: string | undefined;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7).trim();
+    if (req.cookies && req.cookies.safenet_session) {
+      token = req.cookies.safenet_session;
+    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.substring(7).trim();
     } else if (req.headers['x-admin-token']) {
       token = String(req.headers['x-admin-token']).trim();
     }
@@ -391,34 +400,56 @@ app.post('/api/public/careers', (req, res) => {
 app.get('/api/admin/setup-status', (_req, res) => {
   try {
     const isSetup = hasAdminUsers();
-    return res.json({ isSetup });
+    return res.json({ 
+      isSetup,
+      setupKeyRequired: isSetupKeyRequired()
+    });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
 });
 
 // Initial Super Administrator Provisioning (Disabled once any administrator exists)
-app.post('/api/admin/setup-initial', (req, res) => {
+app.post('/api/admin/setup-initial', async (req, res) => {
   try {
-    const { name, email, password, recoveryPassphrase } = req.body;
+    const { name, email, password, recoveryPassphrase, setupKey } = req.body;
     const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
-    const result = createInitialSuperAdmin({ name, email, password, recoveryPassphrase, ip });
-    return res.json({ success: true, ...result });
+    const result = await createInitialSuperAdmin({ name, email, password, recoveryPassphrase, setupKey, ip });
+    
+    // Establish HttpOnly, Secure, SameSite=Lax Session Cookie and CSRF token cookie
+    setSessionCookies(res, result.session, req);
+
+    return res.json({ 
+      success: true, 
+      user: result.user,
+      csrfToken: result.session.csrfToken,
+      expiresAt: new Date(result.session.expiresAt).toISOString()
+    });
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
   }
 });
 
-// Administrator Login with Rate Limiting & Audit Logging
-app.post('/api/admin/login', (req, res) => {
+// Administrator Login with Rate Limiting, Audit Logging & HttpOnly Session Cookie
+app.post('/api/admin/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password credentials are required.' });
     }
     const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
-    const result = loginAdministrator(email, password, ip);
-    return res.json({ success: true, ...result });
+    const userAgent = req.headers['user-agent'];
+    const result = await loginAdministrator(email, password, ip, userAgent);
+
+    // Establish HttpOnly, Secure, SameSite=Lax Session Cookie and CSRF token cookie
+    setSessionCookies(res, result.session, req);
+
+    return res.json({ 
+      success: true, 
+      user: result.user,
+      csrfToken: result.session.csrfToken,
+      expiresAt: new Date(result.session.expiresAt).toISOString()
+    });
   } catch (err: any) {
     return res.status(401).json({ error: err.message });
   }
@@ -435,55 +466,127 @@ app.get('/api/admin/me', requireAdminAuth(), (req: any, res) => {
       email: session.email,
       role: session.role
     },
+    csrfToken: session.csrfToken,
     expiresAt: new Date(session.expiresAt).toISOString()
   });
 });
 
-// Administrator Session Logout
+// Administrator Session Logout with Complete Cookie & In-Memory Invalidation
 app.post('/api/admin/logout', (req, res) => {
-  const authHeader = req.headers.authorization;
   let token: string | undefined;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7).trim();
+  if (req.cookies && req.cookies.safenet_session) {
+    token = req.cookies.safenet_session;
+  } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.substring(7).trim();
   } else if (req.headers['x-admin-token']) {
     token = String(req.headers['x-admin-token']).trim();
   }
   logoutSession(token);
-  return res.json({ success: true, message: 'Administrator session securely terminated.' });
+  clearSessionCookies(res);
+  return res.json({ success: true, message: 'Administrator session securely terminated and cookies cleared.' });
 });
 
 // Forgot / Reset Password via Cryptographic Recovery Passphrase
-app.post('/api/admin/reset-password', (req, res) => {
+app.post('/api/admin/reset-password', async (req, res) => {
   try {
     const { email, recoveryPassphrase, newPassword } = req.body;
     if (!email || !recoveryPassphrase || !newPassword) {
       return res.status(400).json({ error: 'Email, recovery passphrase, and new password are required.' });
     }
     const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
-    resetPasswordWithPassphrase(email, recoveryPassphrase, newPassword, ip);
+    await resetPasswordWithPassphrase(email, recoveryPassphrase, newPassword, ip);
+    clearSessionCookies(res);
     return res.json({
       success: true,
-      message: 'Password credentials securely updated. Please log in with your updated credentials.'
+      message: 'Password credentials securely updated. All previous active sessions revoked. Please log in with your updated credentials.'
     });
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
   }
 });
 
-// Protected database sync endpoint — requires valid administrator session
+// Protected database sync endpoint — backend-enforced RBAC
 app.post('/api/db/sync', requireAdminAuth(), (req: any, res) => {
   try {
+    const session = req.adminSession;
+    const role = session.role;
+
+    // Read-only Auditor cannot modify any database records
+    if (role === 'auditor') {
+      return res.status(403).json({
+        error: "Forbidden: 'auditor' role possesses read-only observation clearance and cannot modify database records.",
+        code: 'ROLE_READ_ONLY'
+      });
+    }
+
     const payload = req.body;
     if (!payload || typeof payload !== 'object') {
       return res.status(400).json({ error: 'Valid state object is required.' });
     }
 
     const currentDb = readDatabase() || ({} as any);
-    // Preserve admin users credentials and audit records
+
+    // Enforce role-based boundaries on fields that can be modified
+    let updatedLeads = currentDb.leads || [];
+    let updatedAssessments = currentDb.securityAssessments || [];
+    let updatedBlogPosts = currentDb.blogPosts || [];
+    let updatedSocialAccounts = currentDb.socialAccounts || [];
+    let updatedSocialPublishJobs = currentDb.socialPublishJobs || [];
+    let updatedJobApplications = currentDb.jobApplications || [];
+    let updatedCareerOpenings = currentDb.careerOpenings || [];
+    let updatedTestimonials = currentDb.testimonials || [];
+    let updatedSiteSettings = currentDb.siteSettings || {};
+
+    if (role === 'super_admin' || role === 'operations_director') {
+      // Unrestricted operational access
+      if (payload.leads !== undefined) updatedLeads = payload.leads;
+      if (payload.securityAssessments !== undefined) updatedAssessments = payload.securityAssessments;
+      if (payload.blogPosts !== undefined) updatedBlogPosts = payload.blogPosts;
+      if (payload.socialAccounts !== undefined) updatedSocialAccounts = payload.socialAccounts;
+      if (payload.socialPublishJobs !== undefined) updatedSocialPublishJobs = payload.socialPublishJobs;
+      if (payload.jobApplications !== undefined) updatedJobApplications = payload.jobApplications;
+      if (payload.careerOpenings !== undefined) updatedCareerOpenings = payload.careerOpenings;
+      if (payload.testimonials !== undefined) updatedTestimonials = payload.testimonials;
+      if (payload.siteSettings !== undefined) updatedSiteSettings = payload.siteSettings;
+    } else if (role === 'operations_officer') {
+      // Operations Officer: leads and security assessments only
+      if (payload.leads !== undefined) updatedLeads = payload.leads;
+      if (payload.securityAssessments !== undefined) updatedAssessments = payload.securityAssessments;
+    } else if (role === 'content_editor') {
+      // Content Editor: blog posts and testimonials only
+      if (payload.blogPosts !== undefined) updatedBlogPosts = payload.blogPosts;
+      if (payload.testimonials !== undefined) updatedTestimonials = payload.testimonials;
+    } else if (role === 'social_media_manager') {
+      // Social Media Manager: social accounts and publish jobs only
+      if (payload.socialAccounts !== undefined) updatedSocialAccounts = payload.socialAccounts;
+      if (payload.socialPublishJobs !== undefined) updatedSocialPublishJobs = payload.socialPublishJobs;
+    } else if (role === 'recruitment_officer') {
+      // Recruitment Officer: job applications and career openings only
+      if (payload.jobApplications !== undefined) updatedJobApplications = payload.jobApplications;
+      if (payload.careerOpenings !== undefined) updatedCareerOpenings = payload.careerOpenings;
+    }
+
+    // Merge new audit logs without allowing deletion of historical logs
+    let mergedAuditLogs = currentDb.auditLogs || [];
+    if (Array.isArray(payload.auditLogs)) {
+      const existingIds = new Set(mergedAuditLogs.map((l: any) => l.id));
+      const newLogs = payload.auditLogs.filter((l: any) => !existingIds.has(l.id));
+      mergedAuditLogs = [...newLogs, ...mergedAuditLogs].slice(0, 200);
+    }
+
     const mergedDb = {
       ...currentDb,
-      ...payload,
-      adminUsers: currentDb.adminUsers || payload.adminUsers || []
+      leads: updatedLeads,
+      securityAssessments: updatedAssessments,
+      blogPosts: updatedBlogPosts,
+      socialAccounts: updatedSocialAccounts,
+      socialPublishJobs: updatedSocialPublishJobs,
+      jobApplications: updatedJobApplications,
+      careerOpenings: updatedCareerOpenings,
+      testimonials: updatedTestimonials,
+      siteSettings: updatedSiteSettings,
+      auditLogs: mergedAuditLogs,
+      adminUsers: currentDb.adminUsers || [] // Credentials can never be mutated via sync
     };
 
     const success = writeDatabase(mergedDb);
@@ -558,8 +661,8 @@ app.get('/api/notifications', (_req, res) => {
   }
 });
 
-// POST social publish queue execution
-app.post('/api/social/publish', async (req, res) => {
+// POST social publish queue execution (Restricted to social_media_manager, operations_director, super_admin)
+app.post('/api/social/publish', requireAdminAuth(['super_admin', 'operations_director', 'social_media_manager']), async (req: any, res) => {
   try {
     const { jobId, platform, postTitle, caption, postUrl } = req.body;
     // In production, official OAuth platform APIs (Meta Graph API, LinkedIn Community Management API, X API v2)
@@ -589,8 +692,8 @@ app.post('/api/social/publish', async (req, res) => {
   }
 });
 
-// POST formal proposal blueprint generator
-app.post('/api/proposals/generate', (req, res) => {
+// POST formal proposal blueprint generator (Restricted to operations roles)
+app.post('/api/proposals/generate', requireAdminAuth(['super_admin', 'operations_director', 'operations_officer']), (req: any, res) => {
   try {
     const { clientName, company, facilityType, location, score, riskRating, services } = req.body;
     const refCode = `SFN-PROP-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;

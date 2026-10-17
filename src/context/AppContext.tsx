@@ -102,6 +102,7 @@ interface AppContextType {
   // Administrative Authentication & Session
   adminUser: AdminUser | null;
   adminSessionToken: string | null;
+  csrfToken: string | null;
   isAdminAuthenticated: boolean;
   adminLoading: boolean;
   loginAdmin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -111,6 +112,7 @@ interface AppContextType {
     email: string;
     password: string;
     recoveryPassphrase?: string;
+    setupKey?: string;
   }) => Promise<{ success: boolean; error?: string }>;
   resetAdminPassword: (
     email: string,
@@ -200,7 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [careerOpenings] = useState<CareerOpening[]>(initialCareerOpenings);
+  const [careerOpenings, setCareerOpenings] = useState<CareerOpening[]>(initialCareerOpenings);
   const [jobApplications, setJobApplications] = useState<JobApplication[]>(() => {
     const saved = localStorage.getItem('safenet_applications');
     return saved ? JSON.parse(saved) : [];
@@ -243,11 +245,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Administrator Authentication State
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
-  const [adminSessionToken, setAdminSessionToken] = useState<string | null>(() => {
-    return localStorage.getItem('safenet_admin_session_token');
-  });
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const [adminLoading, setAdminLoading] = useState<boolean>(true);
-  const isAdminAuthenticated = Boolean(adminSessionToken && adminUser);
+  
+  // adminSessionToken exposed for backwards compatibility if referenced
+  const adminSessionToken = csrfToken;
+  const isAdminAuthenticated = Boolean(adminUser);
 
   // System Notifications State
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
@@ -266,16 +269,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Helper to sync state to server persistent file store (Protected with admin token)
+  // Helper to sync state to server persistent file store (Protected with HttpOnly session cookie & CSRF header)
   const syncToServer = async () => {
-    if (!adminSessionToken) return;
+    if (!adminUser) return;
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
       await fetch('/api/db/sync', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminSessionToken}`
-        },
+        credentials: 'include',
+        headers,
         body: JSON.stringify({
           siteSettings,
           blogPosts,
@@ -284,6 +291,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           leads,
           securityAssessments,
           jobApplications,
+          careerOpenings,
           testimonials,
           auditLogs
         })
@@ -293,15 +301,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Load database state from server (authenticated receives full CRM; unauthenticated receives public content)
-  const loadServerData = async (token?: string | null) => {
+  // Load database state from server (authenticated receives full CRM via HttpOnly cookie; unauthenticated receives public content)
+  const loadServerData = async () => {
     try {
-      const headers: Record<string, string> = {};
-      const activeToken = token !== undefined ? token : adminSessionToken;
-      if (activeToken) {
-        headers['Authorization'] = `Bearer ${activeToken}`;
-      }
-      const res = await fetch('/api/db/state', { headers });
+      const res = await fetch('/api/db/state', { 
+        credentials: 'include' 
+      });
       const json = await res.json();
       if (json && json.seeded && json.data) {
         const d = json.data;
@@ -312,6 +317,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (Array.isArray(d.leads)) setLeads(d.leads);
         if (Array.isArray(d.securityAssessments)) setSecurityAssessments(d.securityAssessments);
         if (Array.isArray(d.jobApplications)) setJobApplications(d.jobApplications);
+        if (Array.isArray(d.careerOpenings)) setCareerOpenings(d.careerOpenings);
         if (Array.isArray(d.testimonials)) setTestimonials(d.testimonials);
         if (Array.isArray(d.auditLogs)) setAuditLogs(d.auditLogs);
       }
@@ -320,54 +326,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // On mount: verify existing session token
+  // On mount: verify existing session via secure HttpOnly cookie
   useEffect(() => {
-    const token = localStorage.getItem('safenet_admin_session_token');
-    if (token) {
-      fetch('/api/admin/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
+    // Purge any legacy browser storage tokens to enforce server-managed HttpOnly sessions
+    try {
+      localStorage.removeItem('safenet_admin_session_token');
+      sessionStorage.removeItem('safenet_admin_session_token');
+    } catch {}
+
+    fetch('/api/admin/me', {
+      credentials: 'include'
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.authenticated && data.user) {
+          setAdminUser(data.user);
+          setCsrfToken(data.csrfToken || null);
+          setCurrentRole(data.user.role);
+          loadServerData();
+        } else {
+          setAdminUser(null);
+          setCsrfToken(null);
+          loadServerData();
+        }
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data.authenticated && data.user) {
-            setAdminUser(data.user);
-            setCurrentRole(data.user.role);
-            loadServerData(token);
-          } else {
-            localStorage.removeItem('safenet_admin_session_token');
-            setAdminSessionToken(null);
-            loadServerData(null);
-          }
-        })
-        .catch(() => {
-          loadServerData(null);
-        })
-        .finally(() => {
-          setAdminLoading(false);
-        });
-    } else {
-      loadServerData(null);
-      setAdminLoading(false);
-    }
+      .catch(() => {
+        setAdminUser(null);
+        setCsrfToken(null);
+        loadServerData();
+      })
+      .finally(() => {
+        setAdminLoading(false);
+      });
 
     refreshNotifications();
   }, []);
 
-  // Admin Login Action
+  // Admin Login Action (HttpOnly cookie set by server; CSRF token captured in state)
   const loginAdmin = async (emailInput: string, passwordInput: string) => {
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailInput, password: passwordInput })
       });
       const data = await res.json();
-      if (res.ok && data.success && data.token) {
-        localStorage.setItem('safenet_admin_session_token', data.token);
-        setAdminSessionToken(data.token);
+      if (res.ok && data.success && data.user) {
         setAdminUser(data.user);
+        setCsrfToken(data.csrfToken || null);
         setCurrentRole(data.user.role);
-        await loadServerData(data.token);
+        await loadServerData();
         showToast(`Welcome back, ${data.user.name}. Authenticated as [${data.user.role.toUpperCase()}].`);
         return { success: true };
       }
@@ -377,46 +386,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Admin Logout Action
+  // Admin Logout Action (Server clears HttpOnly cookies & revokes session from registry)
   const logoutAdmin = async () => {
     try {
-      if (adminSessionToken) {
-        await fetch('/api/admin/logout', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${adminSessionToken}` }
-        });
+      const headers: Record<string, string> = {};
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
       }
+      await fetch('/api/admin/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers
+      });
     } catch (err) {
       console.warn('Logout request failed:', err);
     } finally {
-      localStorage.removeItem('safenet_admin_session_token');
-      setAdminSessionToken(null);
+      try {
+        localStorage.removeItem('safenet_admin_session_token');
+        sessionStorage.removeItem('safenet_admin_session_token');
+      } catch {}
       setAdminUser(null);
+      setCsrfToken(null);
       navigate('/admin/login');
       showToast('Administrator session safely terminated.');
     }
   };
 
-  // Initial Provisioning Action
+  // Initial Provisioning Action (Atomic first Super Administrator creation)
   const setupInitialSuperAdmin = async (data: {
     name: string;
     email: string;
     password: string;
     recoveryPassphrase?: string;
+    setupKey?: string;
   }) => {
     try {
       const res = await fetch('/api/admin/setup-initial', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
       const resData = await res.json();
-      if (res.ok && resData.success && resData.token) {
-        localStorage.setItem('safenet_admin_session_token', resData.token);
-        setAdminSessionToken(resData.token);
+      if (res.ok && resData.success && resData.user) {
         setAdminUser(resData.user);
+        setCsrfToken(resData.csrfToken || null);
         setCurrentRole(resData.user.role);
-        await loadServerData(resData.token);
+        await loadServerData();
         showToast('Super Administrator account provisioned successfully.');
         return { success: true };
       }
@@ -507,9 +523,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     services?: string[];
   }): Promise<ProposalBlueprint> => {
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
       const res = await fetch('/api/proposals/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers,
         body: JSON.stringify(data)
       });
       if (res.ok) {
@@ -835,9 +854,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!job) return;
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
       const res = await fetch('/api/social/publish', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers,
         body: JSON.stringify({
           jobId: job.id,
           platform: job.platform,
@@ -937,6 +959,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentRole,
         adminUser,
         adminSessionToken,
+        csrfToken,
         isAdminAuthenticated,
         adminLoading,
         loginAdmin,

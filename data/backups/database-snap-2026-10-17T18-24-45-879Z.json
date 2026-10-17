@@ -325,6 +325,7 @@
     }
   ],
   "jobApplications": [],
+  "careerOpenings": [],
   "testimonials": [
     {
       "id": "test-1",
@@ -358,6 +359,117 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "audit-1792261485876-9315",
+      "timestamp": "2026-10-17T18:24:45.876Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "ADMIN_LOGIN_SUCCESS",
+      "target": "Operations Command Console",
+      "details": "Authenticated with role [super_admin]. Session established.",
+      "ip": "127.0.0.1",
+      "hash": "a6cfde79cf9fafbbf6fae9e5f7f40270b34befcdd97cc52f49f27600dcb569ce",
+      "prevHash": "16f0571d7c778bde3dd196ec0d17b75f1363812310b96640292ef60074a73a3a"
+    },
+    {
+      "id": "audit-1792261480650-2828",
+      "timestamp": "2026-10-17T18:24:40.650Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "PASSWORD_RESET_EMERGENCY_RECOVERY",
+      "target": "Credential Store",
+      "details": "Master password reset via emergency recovery passphrase. All existing active sessions revoked.",
+      "ip": "127.0.0.1",
+      "hash": "16f0571d7c778bde3dd196ec0d17b75f1363812310b96640292ef60074a73a3a",
+      "prevHash": "f19ba0990480efdb638168fe91d242ab7a5332e823cd7ee5f2df3ae9ab16d8ef"
+    },
+    {
+      "id": "audit-1792261475153-3706",
+      "timestamp": "2026-10-17T18:24:35.153Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "RECOVERY_FAILURE_BAD_PASSPHRASE",
+      "target": "Emergency Recovery Key",
+      "details": "Invalid recovery passphrase supplied. 2 attempt(s) remaining.",
+      "ip": "127.0.0.1",
+      "hash": "f19ba0990480efdb638168fe91d242ab7a5332e823cd7ee5f2df3ae9ab16d8ef",
+      "prevHash": "d9745e7d79918264f01e552938037567216b418470f898bba9223b950b3e0d41"
+    },
+    {
+      "id": "audit-1792261461773-1441",
+      "timestamp": "2026-10-17T18:24:21.773Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "ADMIN_LOGIN_SUCCESS",
+      "target": "Operations Command Console",
+      "details": "Authenticated with role [super_admin]. Session established.",
+      "ip": "127.0.0.1",
+      "hash": "d9745e7d79918264f01e552938037567216b418470f898bba9223b950b3e0d41",
+      "prevHash": "2168a5df8203ae0d7d01d2e282031f0453f9bfc7ba8cd17651e68134995f330c"
+    },
+    {
+      "id": "audit-1792261452605-3949",
+      "timestamp": "2026-10-17T18:24:12.605Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "LOGIN_FAILURE_BAD_PASSWORD",
+      "target": "Auth Gateway",
+      "details": "Incorrect password supplied. 4 attempts remaining before lockout.",
+      "ip": "127.0.0.1",
+      "hash": "2168a5df8203ae0d7d01d2e282031f0453f9bfc7ba8cd17651e68134995f330c",
+      "prevHash": "3ae1fa3effe2861ca5f6bd56c92ceef9f5fd919d5702239a89d030d4dcbcbfe0"
+    },
+    {
+      "id": "audit-1792261423643-8752",
+      "timestamp": "2026-10-17T18:23:43.643Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "INITIAL_PROVISIONING",
+      "target": "Core Administrative Identity",
+      "details": "First Super Administrator provisioned using PBKDF2-SHA512 (210,000 iterations). Initial setup permanently locked.",
+      "ip": "127.0.0.1",
+      "hash": "3ae1fa3effe2861ca5f6bd56c92ceef9f5fd919d5702239a89d030d4dcbcbfe0",
+      "prevHash": "GENESIS-SAFENET-SECURE-ANCHOR-000"
+    },
+    {
+      "id": "audit-1792260496931",
+      "timestamp": "2026-10-17T18:08:16.931Z",
+      "user": "Executive Director (owner@safenetsecurityltd.com)",
+      "action": "ADMIN_LOGIN_SUCCESS",
+      "target": "Operations Command Console",
+      "details": "Successful authenticated session started with role [super_admin].",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1792260496754",
+      "timestamp": "2026-10-17T18:08:16.754Z",
+      "user": "Executive Director (owner@safenetsecurityltd.com)",
+      "action": "ADMIN_PROVISIONED",
+      "target": "System Security Core",
+      "details": "First Super Administrator account securely provisioned with PBKDF2-SHA512 encryption.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1792154129759",
+      "timestamp": "2026-10-16T12:35:29.759Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "PASSWORD_RESET_PASSPHRASE",
+      "target": "Admin Security Credentials",
+      "details": "Password was securely updated using the cryptographic recovery passphrase.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1792154129603",
+      "timestamp": "2026-10-16T12:35:29.603Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "ADMIN_LOGIN_SUCCESS",
+      "target": "Operations Command Console",
+      "details": "Successful authenticated session started with role [super_admin].",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1792154129517",
+      "timestamp": "2026-10-16T12:35:29.517Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "PASSWORD_RESET_PASSPHRASE",
+      "target": "Admin Security Credentials",
+      "details": "Password was securely updated using the cryptographic recovery passphrase.",
+      "ip": "127.0.0.1"
+    },
     {
       "id": "audit-1792154119775",
       "timestamp": "2026-10-16T12:35:19.775Z",
@@ -432,43 +544,24 @@
     }
   ],
   "siteSettings": {
-    "companyName": "SafeNet Security Solutions Ltd",
-    "tagline": "Protecting What Matters Most With Unwavering Vigilance",
-    "phone": "+234 813 129 6054",
-    "email": "info@safenetsecurityltd.com",
-    "whatsapp": "+234 813 129 6054",
-    "addressNigeria": "Plot 14, Commercial Avenue, Victoria Island, Lagos, Nigeria",
-    "addressUK": "85 Great Portland Street, First Floor, London, W1W 7LT, United Kingdom",
-    "establishedYear": "2025",
-    "stats": {
-      "trainedGuards": "500+",
-      "responseTime": "24/7",
-      "droneCctvCoverage": "100%",
-      "clientRetention": "99.4%"
-    },
-    "socialPublishingMode": "manual_approval",
-    "socialLinks": {
-      "facebook": "https://facebook.com/safenetsecurityltd",
-      "linkedin": "https://linkedin.com/company/safenet-security-solutions-ltd",
-      "x": "https://x.com/safenet_sec",
-      "instagram": "https://instagram.com/safenetsecurityltd",
-      "youtube": "https://youtube.com/@safenetsecurityltd"
-    }
+    "phone": "+234 813 129 6054"
   },
   "adminUsers": [
     {
-      "id": "admin-1792154119668",
+      "id": "admin-1792261423636",
       "name": "Capt. Emmanuel Adeleke (Rtd.)",
       "email": "director@safenetsecurityltd.com",
       "role": "super_admin",
-      "salt": "774bcb7b96262fd88f64b418c0714e8a8bdbea4339994e8786fd8d61511476a4",
-      "hash": "3899db54414063ad631b4796d969e2a335add1e547165f350641a0ed0b0ba193770aaf57199bd966abcfc40f4baf73071caf836cf7279bf2fc88f63d2f3d838c",
-      "recoveryPassphraseHash": "642643f07628ad0cdaf02ab82c3a25a8016bc13540ce2bb8a4ab2758d9d32ecb1d1fdbcbccc7dc35bb2ce7b694cebde233dcd2423379362dbc3817f5826ba787",
-      "recoveryPassphraseSalt": "aa98534d9085b79ad3c327ee5d9eb61cbfe8a35da9efff87488b8a069722e2ec",
-      "createdAt": "2026-10-16T12:35:19.668Z",
-      "lastLogin": "2026-10-16T12:35:19.774Z",
+      "salt": "9b5e75870dd8fbb809577fb746b422b3fe87e1689a7097210fd5a8c56fb07bd9",
+      "hash": "2fa410bf65a423767cc0de41e4671bc6778422df2020cb8bb9427f2767499e4c1ff4e50572807ec60bcdbbad6ac52c82ae6b35e4ebb5f3c1f3d429ca643c34da",
+      "iterations": 210000,
+      "recoveryPassphraseHash": "9c7fdbf74fcc19cfedc24d337b3314a1c0c46236d31e2aac80f1b95db4991256367775e9dbaa67ee4525cd6b81311aab9d962cdada153fef95b92966ea6e4c55",
+      "recoveryPassphraseSalt": "72304b9c8e38d06000264b68040d1d7453599e1d1f902c935da659c7e6492d09",
+      "recoveryPassphraseIterations": 210000,
+      "createdAt": "2026-10-17T18:23:43.636Z",
+      "lastLogin": "2026-10-17T18:24:45.876Z",
       "status": "active"
     }
   ],
-  "updatedAt": "2026-10-16T12:35:19.775Z"
+  "updatedAt": "2026-10-17T18:24:45.878Z"
 }
