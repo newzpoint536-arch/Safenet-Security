@@ -150,6 +150,33 @@ interface AppContextType {
   clearAiChatInitialPrompt: () => void;
 }
 
+export const normalizeSiteSettings = (settings?: Partial<SiteSettings> | null): SiteSettings => {
+  return {
+    companyName: settings?.companyName || initialSiteSettings.companyName,
+    tagline: settings?.tagline || initialSiteSettings.tagline,
+    phone: settings?.phone || initialSiteSettings.phone,
+    email: settings?.email || initialSiteSettings.email,
+    whatsapp: settings?.whatsapp || initialSiteSettings.whatsapp,
+    addressNigeria: settings?.addressNigeria || initialSiteSettings.addressNigeria,
+    addressUK: settings?.addressUK || initialSiteSettings.addressUK,
+    establishedYear: settings?.establishedYear || initialSiteSettings.establishedYear,
+    socialPublishingMode: settings?.socialPublishingMode || initialSiteSettings.socialPublishingMode,
+    stats: {
+      trainedGuards: settings?.stats?.trainedGuards || initialSiteSettings.stats.trainedGuards,
+      responseTime: settings?.stats?.responseTime || initialSiteSettings.stats.responseTime,
+      droneCctvCoverage: settings?.stats?.droneCctvCoverage || initialSiteSettings.stats.droneCctvCoverage,
+      clientRetention: settings?.stats?.clientRetention || initialSiteSettings.stats.clientRetention
+    },
+    socialLinks: {
+      facebook: settings?.socialLinks?.facebook || initialSiteSettings.socialLinks.facebook,
+      linkedin: settings?.socialLinks?.linkedin || initialSiteSettings.socialLinks.linkedin,
+      x: settings?.socialLinks?.x || initialSiteSettings.socialLinks.x,
+      instagram: settings?.socialLinks?.instagram || initialSiteSettings.socialLinks.instagram,
+      youtube: settings?.socialLinks?.youtube || initialSiteSettings.socialLinks.youtube
+    }
+  };
+};
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -174,8 +201,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Persistent States
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(() => {
-    const saved = localStorage.getItem('safenet_site_settings');
-    return saved ? JSON.parse(saved) : initialSiteSettings;
+    try {
+      const saved = localStorage.getItem('safenet_site_settings');
+      return saved ? normalizeSiteSettings(JSON.parse(saved)) : initialSiteSettings;
+    } catch {
+      return initialSiteSettings;
+    }
   });
 
   const [heroSlides] = useState<HeroSlide[]>(initialHeroSlides);
@@ -317,7 +348,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const json = await res.json();
       if (json && json.seeded && json.data) {
         const d = json.data;
-        if (d.siteSettings) setSiteSettings(d.siteSettings);
+        if (d.siteSettings) setSiteSettings(prev => normalizeSiteSettings({ ...prev, ...d.siteSettings }));
         if (Array.isArray(d.blogPosts) && d.blogPosts.length > 0) setBlogPosts(d.blogPosts);
         if (Array.isArray(d.socialAccounts) && d.socialAccounts.length > 0) setSocialAccounts(d.socialAccounts);
         if (Array.isArray(d.socialPublishJobs)) setSocialPublishJobs(d.socialPublishJobs);
@@ -626,7 +657,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateSiteSettings = (newSettings: Partial<SiteSettings>) => {
     setSiteSettings(prev => {
-      const updated = { ...prev, ...newSettings };
+      const updated = normalizeSiteSettings({
+        ...prev,
+        ...newSettings,
+        stats: {
+          ...prev.stats,
+          ...(newSettings.stats || {})
+        },
+        socialLinks: {
+          ...prev.socialLinks,
+          ...(newSettings.socialLinks || {})
+        }
+      });
       addAuditLog('SETTINGS_UPDATE', 'Site Settings', 'Updated company parameters or social automation mode');
       return updated;
     });

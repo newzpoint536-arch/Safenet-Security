@@ -750,7 +750,7 @@ export const SafeNetAiAgent: React.FC = () => {
                       </button>
 
                       <a
-                        href={`https://wa.me/${siteSettings.whatsapp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                        href={`https://wa.me/${(siteSettings?.whatsapp || '+234 813 129 6054').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
                           `Hello SafeNet Operations, I consulted with Sentinel AI regarding ${activeContext.pageTitle} security. I would like to speak directly with an operations officer.`
                         )}`}
                         target="_blank"

@@ -21,7 +21,7 @@ export const AboutPage: React.FC = () => {
             About SafeNet Security Solutions Ltd
           </h1>
           <p className="text-base text-slate-300 leading-relaxed font-normal">
-            SafeNet Security Solutions Ltd is a fully incorporated, professionally managed corporate security company established in {siteSettings.establishedYear}. With our head office in the United Kingdom and operational branches across Nigeria, we bridge international security best practices with deep Nigerian operational knowledge.
+            SafeNet Security Solutions Ltd is a fully incorporated, professionally managed corporate security company established in {siteSettings?.establishedYear || '2025'}. With our head office in the United Kingdom and operational branches across Nigeria, we bridge international security best practices with deep Nigerian operational knowledge.
           </p>
         </div>
       </div>
@@ -47,14 +47,14 @@ export const AboutPage: React.FC = () => {
                   Head Office
                 </div>
                 <div className="text-sm text-white font-medium">London, United Kingdom</div>
-                <div className="text-xs text-slate-400">{siteSettings.addressUK}</div>
+                <div className="text-xs text-slate-400">{siteSettings?.addressUK || '85 Great Portland Street, First Floor, London, W1W 7LT, United Kingdom'}</div>
               </div>
               <div className="space-y-1">
                 <div className="text-xs uppercase font-semibold tracking-wider text-amber-400">
                   Operational Hub
                 </div>
                 <div className="text-sm text-white font-medium">Lagos, Nigeria</div>
-                <div className="text-xs text-slate-400">{siteSettings.addressNigeria}</div>
+                <div className="text-xs text-slate-400">{siteSettings?.addressNigeria || 'Plot 14, Commercial Avenue, Victoria Island, Lagos, Nigeria'}</div>
               </div>
             </div>
           </div>

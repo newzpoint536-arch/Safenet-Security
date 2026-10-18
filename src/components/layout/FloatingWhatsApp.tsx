@@ -8,7 +8,7 @@ export const FloatingWhatsApp: React.FC = () => {
   const [selectedTopic, setSelectedTopic] = useState('Quote Request');
   const [userMsg, setUserMsg] = useState('');
 
-  const cleanPhone = siteSettings.whatsapp.replace(/[^0-9]/g, '');
+  const cleanPhone = (siteSettings?.whatsapp || '+234 813 129 6054').replace(/[^0-9]/g, '');
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,7 +123,7 @@ export const FloatingWhatsApp: React.FC = () => {
 
             <div className="text-[10px] text-center text-slate-400 flex items-center justify-center gap-1.5 pt-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              <span>Direct operational hotline: <strong className="text-slate-200">{siteSettings.whatsapp}</strong></span>
+              <span>Direct operational hotline: <strong className="text-slate-200">{siteSettings?.whatsapp || '+234 813 129 6054'}</strong></span>
             </div>
           </form>
         </div>

@@ -25,6 +25,47 @@ export interface DatabaseSchema {
   updatedAt: string;
 }
 
+export const DEFAULT_SITE_SETTINGS = {
+  companyName: 'SafeNet Security Solutions Ltd',
+  tagline: 'Protecting What Matters Most With Unwavering Vigilance',
+  phone: '+234 813 129 6054',
+  email: 'info@safenetsecurityltd.com',
+  whatsapp: '+234 813 129 6054',
+  addressNigeria: 'Plot 14, Commercial Avenue, Victoria Island, Lagos, Nigeria',
+  addressUK: '85 Great Portland Street, First Floor, London, W1W 7LT, United Kingdom',
+  establishedYear: '2025',
+  stats: {
+    trainedGuards: '500+',
+    responseTime: '24/7',
+    droneCctvCoverage: '100%',
+    clientRetention: '99.4%'
+  },
+  socialPublishingMode: 'manual_approval',
+  socialLinks: {
+    facebook: 'https://www.facebook.com/share/1H3ow82i4q',
+    linkedin: 'https://linkedin.com/company/safenet-security-solutions-ltd',
+    x: 'https://x.com/LtdSafenet10159',
+    instagram: 'https://www.instagram.com/invites/contact/?utm_source=ig_contact_invite&utm_medium=copy_link&utm_content=itpgcrs',
+    youtube: 'https://youtube.com/@safenetsecurityltd'
+  }
+};
+
+export function normalizeDbSiteSettings(existingSettings?: any): any {
+  const s = existingSettings || {};
+  return {
+    ...DEFAULT_SITE_SETTINGS,
+    ...s,
+    stats: {
+      ...DEFAULT_SITE_SETTINGS.stats,
+      ...(s.stats || {})
+    },
+    socialLinks: {
+      ...DEFAULT_SITE_SETTINGS.socialLinks,
+      ...(s.socialLinks || {})
+    }
+  };
+}
+
 // In-memory write queue to serialize concurrent write operations
 let writeQueue: Promise<boolean> = Promise.resolve(true);
 let lastChecksum = '';
@@ -49,12 +90,17 @@ export function readDatabase(): DatabaseSchema | null {
         console.warn('[SafeNet DB] Primary database file missing. Auto-recovering from database.backup.json');
         const backupData = fs.readFileSync(backupFile, 'utf-8');
         fs.writeFileSync(DB_FILE, backupData, 'utf-8');
-        return JSON.parse(backupData);
+        const parsed = JSON.parse(backupData);
+        if (parsed) parsed.siteSettings = normalizeDbSiteSettings(parsed.siteSettings);
+        return parsed;
       }
       return null;
     }
     const data = fs.readFileSync(DB_FILE, 'utf-8');
     const parsed = JSON.parse(data);
+    if (parsed) {
+      parsed.siteSettings = normalizeDbSiteSettings(parsed.siteSettings);
+    }
     return parsed;
   } catch (err) {
     console.error('[SafeNet DB] Error reading persistent database, checking snapshots:', err);
@@ -128,7 +174,7 @@ function executeAtomicWrite(data: Partial<DatabaseSchema>): boolean {
       careerOpenings: data.careerOpenings || existing.careerOpenings || [],
       testimonials: data.testimonials || existing.testimonials || [],
       auditLogs: data.auditLogs || existing.auditLogs || [],
-      siteSettings: data.siteSettings || existing.siteSettings || {},
+      siteSettings: normalizeDbSiteSettings(data.siteSettings !== undefined ? { ...existing.siteSettings, ...data.siteSettings } : existing.siteSettings),
       adminUsers: data.adminUsers !== undefined ? data.adminUsers : (existing.adminUsers || []),
       updatedAt: new Date().toISOString()
     };

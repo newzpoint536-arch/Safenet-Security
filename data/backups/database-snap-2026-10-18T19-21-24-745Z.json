@@ -1,6 +1,17 @@
 {
   "leads": [
     {
+      "id": "lead-1792261501855-2307",
+      "createdAt": "2026-10-17T18:25:01.855Z",
+      "status": "new",
+      "notes": [],
+      "fullName": "Alhaji Musa Danjuma",
+      "phone": "+234 803 555 1234",
+      "email": "musa@danjumagroup.ng",
+      "serviceRequired": "Manned Guarding & Tactical Response",
+      "location": "Abuja CBD"
+    },
+    {
       "id": "lead-1792154084927-3146",
       "createdAt": "2026-10-16T12:34:44.927Z",
       "status": "new",
@@ -360,6 +371,81 @@
   ],
   "auditLogs": [
     {
+      "id": "audit-1792351284741-8469",
+      "timestamp": "2026-10-18T19:21:24.741Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (owner@safenetsecurityltd.com)",
+      "action": "LOGIN_FAILURE_BAD_PASSWORD",
+      "target": "Auth Gateway",
+      "details": "Incorrect password supplied. 4 attempts remaining before lockout.",
+      "ip": "127.0.0.1",
+      "hash": "64f44df793ea07d5c201a4f851249ee786eaae069c3dc545e70d08096a49f3c4",
+      "prevHash": "80e4108ba8276c3dbf0004d425397d694d55e45b9020c31dede7773ef5257da9"
+    },
+    {
+      "id": "audit-1792351266084-5506",
+      "timestamp": "2026-10-18T19:21:06.083Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (owner@safenetsecurityltd.com)",
+      "action": "OWNER_PRIVILEGE_RECOVERY",
+      "target": "Super Administrator Account",
+      "details": "Owner-level recovery successfully executed using one-time server authorization secret. Previous identity: Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com). All previous sessions revoked. One-time recovery authorization permanently consumed and disabled.",
+      "ip": "127.0.0.1",
+      "hash": "80e4108ba8276c3dbf0004d425397d694d55e45b9020c31dede7773ef5257da9",
+      "prevHash": "9ce75f208827cc92c48806a70f16d38d63e93c66f5061963d8cbca8a8d7db003"
+    },
+    {
+      "id": "audit-1792351254021-2182",
+      "timestamp": "2026-10-18T19:20:54.021Z",
+      "user": "Unknown (owner@safenetsecurityltd.com)",
+      "action": "OWNER_RECOVERY_INVALID_SECRET",
+      "target": "Security Authorization Gateway",
+      "details": "Failed owner recovery attempt with invalid authorization secret. 2 attempts remaining.",
+      "ip": "127.0.0.1",
+      "hash": "9ce75f208827cc92c48806a70f16d38d63e93c66f5061963d8cbca8a8d7db003",
+      "prevHash": "GENESIS-SAFENET-SECURE-ANCHOR-000"
+    },
+    {
+      "id": "audit-1792261501855",
+      "timestamp": "2026-10-17T18:25:01.855Z",
+      "user": "Inquirer (Alhaji Musa Danjuma)",
+      "action": "LEAD_SUBMITTED",
+      "target": "Commercial Leads Vault",
+      "details": "Quote inquiry received for Manned Guarding & Tactical Response in Abuja CBD.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1792261485876-9315",
+      "timestamp": "2026-10-17T18:24:45.876Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "ADMIN_LOGIN_SUCCESS",
+      "target": "Operations Command Console",
+      "details": "Authenticated with role [super_admin]. Session established.",
+      "ip": "127.0.0.1",
+      "hash": "a6cfde79cf9fafbbf6fae9e5f7f40270b34befcdd97cc52f49f27600dcb569ce",
+      "prevHash": "16f0571d7c778bde3dd196ec0d17b75f1363812310b96640292ef60074a73a3a"
+    },
+    {
+      "id": "audit-1792261480650-2828",
+      "timestamp": "2026-10-17T18:24:40.650Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "PASSWORD_RESET_EMERGENCY_RECOVERY",
+      "target": "Credential Store",
+      "details": "Master password reset via emergency recovery passphrase. All existing active sessions revoked.",
+      "ip": "127.0.0.1",
+      "hash": "16f0571d7c778bde3dd196ec0d17b75f1363812310b96640292ef60074a73a3a",
+      "prevHash": "f19ba0990480efdb638168fe91d242ab7a5332e823cd7ee5f2df3ae9ab16d8ef"
+    },
+    {
+      "id": "audit-1792261475153-3706",
+      "timestamp": "2026-10-17T18:24:35.153Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "RECOVERY_FAILURE_BAD_PASSPHRASE",
+      "target": "Emergency Recovery Key",
+      "details": "Invalid recovery passphrase supplied. 2 attempt(s) remaining.",
+      "ip": "127.0.0.1",
+      "hash": "f19ba0990480efdb638168fe91d242ab7a5332e823cd7ee5f2df3ae9ab16d8ef",
+      "prevHash": "d9745e7d79918264f01e552938037567216b418470f898bba9223b950b3e0d41"
+    },
+    {
       "id": "audit-1792261461773-1441",
       "timestamp": "2026-10-17T18:24:21.773Z",
       "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
@@ -517,18 +603,18 @@
     {
       "id": "admin-1792261423636",
       "name": "Capt. Emmanuel Adeleke (Rtd.)",
-      "email": "director@safenetsecurityltd.com",
+      "email": "owner@safenetsecurityltd.com",
       "role": "super_admin",
-      "salt": "b06e7ef0bbb9ae275876ee2b89fbf2db7a049dc0946815e59fe307b10462fca9",
-      "hash": "47e877c981c48adb2cb139219a01797a3bb9e2cc9ad34ac7c6b9d0190b4f076489e3fe22a417e3bf827274513727f35791a2b1a5d212c0eab263d38b43d18e8a",
+      "salt": "5dadface0277d0e964f36fc56dc0b0225c0a84af4ea7d20fdc6724fc4df44928",
+      "hash": "ae213a42e201c6cfa0c1354279eed1cb1d45c0a1b8ff1cbdc887f5f3ad89e9704805788265f3192bca21e25e70b8c9b830754d128598bd36eea860a76400d637",
       "iterations": 210000,
-      "recoveryPassphraseHash": "9c7fdbf74fcc19cfedc24d337b3314a1c0c46236d31e2aac80f1b95db4991256367775e9dbaa67ee4525cd6b81311aab9d962cdada153fef95b92966ea6e4c55",
-      "recoveryPassphraseSalt": "72304b9c8e38d06000264b68040d1d7453599e1d1f902c935da659c7e6492d09",
+      "recoveryPassphraseHash": "f59d47e1148cbb65546798d590b729a0145d43c788f38142ba284f18e0a691f0a3439328b9d25e6ae6119239350fbb4d60807aafe5c05812a5d77cc3117767ed",
+      "recoveryPassphraseSalt": "309fa3a50be5badabbbfcc6c20a5fe3f0cf880fd6304a976a73dccf535208243",
       "recoveryPassphraseIterations": 210000,
       "createdAt": "2026-10-17T18:23:43.636Z",
-      "lastLogin": "2026-10-17T18:24:21.773Z",
+      "lastLogin": "2026-10-18T19:21:06.083Z",
       "status": "active"
     }
   ],
-  "updatedAt": "2026-10-17T18:24:21.775Z"
+  "updatedAt": "2026-10-18T19:21:24.744Z"
 }

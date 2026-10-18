@@ -64,7 +64,7 @@ export const ContactPage: React.FC = () => {
 
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
                 <a
-                  href={`tel:${siteSettings.phone.replace(/\s+/g, '')}`}
+                  href={`tel:${(siteSettings?.phone || '+234 813 129 6054').replace(/\s+/g, '')}`}
                   className="flex items-center gap-3 text-white hover:text-amber-400 transition-colors group"
                 >
                   <div className="w-10 h-10 rounded bg-slate-950 border border-slate-800 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
@@ -72,13 +72,13 @@ export const ContactPage: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-[11px] text-slate-400 uppercase font-semibold">24/7 Operations Desk</div>
-                    <div className="text-sm font-bold font-mono">{siteSettings.phone}</div>
+                    <div className="text-sm font-bold font-mono">{siteSettings?.phone || '+234 813 129 6054'}</div>
                   </div>
                 </a>
 
                 <div className="border-t border-slate-800/80 pt-3">
                   <a
-                    href={`mailto:${siteSettings.email}`}
+                    href={`mailto:${siteSettings?.email || 'info@safenetsecurityltd.com'}`}
                     className="flex items-center gap-3 text-white hover:text-amber-400 transition-colors group"
                   >
                     <div className="w-10 h-10 rounded bg-slate-950 border border-slate-800 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
@@ -86,14 +86,14 @@ export const ContactPage: React.FC = () => {
                     </div>
                     <div>
                       <div className="text-[11px] text-slate-400 uppercase font-semibold">Corporate Email</div>
-                      <div className="text-sm font-bold font-mono truncate">{siteSettings.email}</div>
+                      <div className="text-sm font-bold font-mono truncate">{siteSettings?.email || 'info@safenetsecurityltd.com'}</div>
                     </div>
                   </a>
                 </div>
 
                 <div className="border-t border-slate-800/80 pt-3">
                   <a
-                    href={`https://wa.me/${siteSettings.whatsapp.replace(/[^0-9]/g, '')}`}
+                    href={`https://wa.me/${(siteSettings?.whatsapp || '+234 813 129 6054').replace(/[^0-9]/g, '')}`}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center gap-3 text-white hover:text-emerald-400 transition-colors group"
@@ -103,7 +103,7 @@ export const ContactPage: React.FC = () => {
                     </div>
                     <div>
                       <div className="text-[11px] text-slate-400 uppercase font-semibold">WhatsApp Dispatch</div>
-                      <div className="text-sm font-bold font-mono text-emerald-400">{siteSettings.whatsapp}</div>
+                      <div className="text-sm font-bold font-mono text-emerald-400">{siteSettings?.whatsapp || '+234 813 129 6054'}</div>
                     </div>
                   </a>
                 </div>
@@ -122,7 +122,7 @@ export const ContactPage: React.FC = () => {
                     <MapPin className="w-4 h-4" />
                     <span>Lagos Operational Hub (Nigeria)</span>
                   </div>
-                  <div className="text-xs text-white font-medium">{siteSettings.addressNigeria}</div>
+                  <div className="text-xs text-white font-medium">{siteSettings?.addressNigeria || 'Plot 14, Commercial Avenue, Victoria Island, Lagos, Nigeria'}</div>
                   <p className="text-[11px] text-slate-400">
                     Central Monitoring Station, Drone Operations Hub & Quick Intervention Dispatch.
                   </p>
@@ -133,7 +133,7 @@ export const ContactPage: React.FC = () => {
                     <MapPin className="w-4 h-4" />
                     <span>London Global Headquarters (UK)</span>
                   </div>
-                  <div className="text-xs text-white font-medium">{siteSettings.addressUK}</div>
+                  <div className="text-xs text-white font-medium">{siteSettings?.addressUK || '85 Great Portland Street, First Floor, London, W1W 7LT, United Kingdom'}</div>
                   <p className="text-[11px] text-slate-400">
                     Executive Governance, Specialist Training Standards & International Risk Advisory.
                   </p>
@@ -151,7 +151,7 @@ export const ContactPage: React.FC = () => {
               </p>
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <a
-                  href={siteSettings.socialLinks.linkedin}
+                  href={siteSettings?.socialLinks?.linkedin || 'https://linkedin.com/company/safenet-security-solutions-ltd'}
                   target="_blank"
                   rel="noreferrer"
                   className="px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-amber-400/40 rounded text-xs text-slate-300 hover:text-amber-400 transition-colors flex items-center gap-1.5"
@@ -160,7 +160,7 @@ export const ContactPage: React.FC = () => {
                   <span>LinkedIn</span>
                 </a>
                 <a
-                  href={siteSettings.socialLinks.facebook}
+                  href={siteSettings?.socialLinks?.facebook || 'https://www.facebook.com/share/1H3ow82i4q'}
                   target="_blank"
                   rel="noreferrer"
                   className="px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-amber-400/40 rounded text-xs text-slate-300 hover:text-amber-400 transition-colors flex items-center gap-1.5"
@@ -169,7 +169,7 @@ export const ContactPage: React.FC = () => {
                   <span>Facebook</span>
                 </a>
                 <a
-                  href={siteSettings.socialLinks.x}
+                  href={siteSettings?.socialLinks?.x || 'https://x.com/LtdSafenet10159'}
                   target="_blank"
                   rel="noreferrer"
                   className="px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-amber-400/40 rounded text-xs text-slate-300 hover:text-amber-400 transition-colors flex items-center gap-1.5"
@@ -178,7 +178,7 @@ export const ContactPage: React.FC = () => {
                   <span>X (Twitter)</span>
                 </a>
                 <a
-                  href={siteSettings.socialLinks.instagram}
+                  href={siteSettings?.socialLinks?.instagram || 'https://www.instagram.com/invites/contact/?utm_source=ig_contact_invite&utm_medium=copy_link&utm_content=itpgcrs'}
                   target="_blank"
                   rel="noreferrer"
                   className="px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-amber-400/40 rounded text-xs text-slate-300 hover:text-amber-400 transition-colors flex items-center gap-1.5"
@@ -187,7 +187,7 @@ export const ContactPage: React.FC = () => {
                   <span>Instagram</span>
                 </a>
                 <a
-                  href={siteSettings.socialLinks.youtube}
+                  href={siteSettings?.socialLinks?.youtube || 'https://youtube.com/@safenetsecurityltd'}
                   target="_blank"
                   rel="noreferrer"
                   className="px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-red-400/40 rounded text-xs text-slate-300 hover:text-red-400 transition-colors flex items-center gap-1.5"

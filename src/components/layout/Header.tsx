@@ -111,18 +111,18 @@ export const Header: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <a href={`tel:${siteSettings.phone.replace(/\s+/g, '')}`} className="flex items-center gap-1.5 hover:text-amber-400 transition-colors">
+            <a href={`tel:${(siteSettings?.phone || '+234 813 129 6054').replace(/\s+/g, '')}`} className="flex items-center gap-1.5 hover:text-amber-400 transition-colors">
               <Phone className="w-3 h-3 text-amber-400" />
-              <span className="font-mono text-slate-200">{siteSettings.phone}</span>
+              <span className="font-mono text-slate-200">{siteSettings?.phone || '+234 813 129 6054'}</span>
             </a>
             <span className="text-slate-700">|</span>
             <div className="flex items-center gap-2">
               <span className="text-[10px] uppercase font-semibold text-slate-500">Official Channels:</span>
-              <a href={siteSettings.socialLinks.linkedin} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-amber-400 transition-colors px-1 font-mono font-bold" title="LinkedIn">in</a>
-              <a href={siteSettings.socialLinks.facebook} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-amber-400 transition-colors px-1 font-mono font-bold" title="Facebook">fb</a>
-              <a href={siteSettings.socialLinks.x} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-amber-400 transition-colors px-1 font-mono font-bold" title="X / Twitter">X</a>
-              <a href={siteSettings.socialLinks.instagram} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-amber-400 transition-colors px-1 font-mono font-bold" title="Instagram">ig</a>
-              <a href={siteSettings.socialLinks.youtube} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-red-400 transition-colors px-1 font-mono font-bold" title="YouTube">yt</a>
+              <a href={siteSettings?.socialLinks?.linkedin || 'https://linkedin.com/company/safenet-security-solutions-ltd'} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-amber-400 transition-colors px-1 font-mono font-bold" title="LinkedIn">in</a>
+              <a href={siteSettings?.socialLinks?.facebook || 'https://www.facebook.com/share/1H3ow82i4q'} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-amber-400 transition-colors px-1 font-mono font-bold" title="Facebook">fb</a>
+              <a href={siteSettings?.socialLinks?.x || 'https://x.com/LtdSafenet10159'} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-amber-400 transition-colors px-1 font-mono font-bold" title="X / Twitter">X</a>
+              <a href={siteSettings?.socialLinks?.instagram || 'https://www.instagram.com/invites/contact/?utm_source=ig_contact_invite&utm_medium=copy_link&utm_content=itpgcrs'} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-amber-400 transition-colors px-1 font-mono font-bold" title="Instagram">ig</a>
+              <a href={siteSettings?.socialLinks?.youtube || 'https://youtube.com/@safenetsecurityltd'} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-red-400 transition-colors px-1 font-mono font-bold" title="YouTube">yt</a>
             </div>
           </div>
         </div>
@@ -565,21 +565,21 @@ export const Header: React.FC = () => {
               Official Verified Channels
             </div>
             <div className="flex items-center gap-2">
-              <a href={siteSettings.socialLinks.linkedin} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-amber-400 font-mono font-bold" title="LinkedIn">in</a>
-              <a href={siteSettings.socialLinks.facebook} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-amber-400 font-mono font-bold" title="Facebook">fb</a>
-              <a href={siteSettings.socialLinks.x} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-amber-400 font-mono font-bold" title="X / Twitter">X</a>
-              <a href={siteSettings.socialLinks.instagram} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-amber-400 font-mono font-bold" title="Instagram">ig</a>
-              <a href={siteSettings.socialLinks.youtube} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-red-400 font-mono font-bold" title="YouTube">yt</a>
+              <a href={siteSettings?.socialLinks?.linkedin || 'https://linkedin.com/company/safenet-security-solutions-ltd'} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-amber-400 font-mono font-bold" title="LinkedIn">in</a>
+              <a href={siteSettings?.socialLinks?.facebook || 'https://www.facebook.com/share/1H3ow82i4q'} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-amber-400 font-mono font-bold" title="Facebook">fb</a>
+              <a href={siteSettings?.socialLinks?.x || 'https://x.com/LtdSafenet10159'} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-amber-400 font-mono font-bold" title="X / Twitter">X</a>
+              <a href={siteSettings?.socialLinks?.instagram || 'https://www.instagram.com/invites/contact/?utm_source=ig_contact_invite&utm_medium=copy_link&utm_content=itpgcrs'} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-amber-400 font-mono font-bold" title="Instagram">ig</a>
+              <a href={siteSettings?.socialLinks?.youtube || 'https://youtube.com/@safenetsecurityltd'} target="_blank" rel="noreferrer" className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-slate-300 hover:text-red-400 font-mono font-bold" title="YouTube">yt</a>
             </div>
           </div>
 
           <div className="pt-3 border-t border-slate-800 space-y-2">
             <a 
-              href={`tel:${siteSettings.phone.replace(/\s+/g, '')}`} 
+              href={`tel:${(siteSettings?.phone || '+234 813 129 6054').replace(/\s+/g, '')}`} 
               className="flex items-center gap-2 text-xs text-slate-300 py-1"
             >
               <Phone className="w-4 h-4 text-amber-400" />
-              <span>{siteSettings.phone}</span>
+              <span>{siteSettings?.phone || '+234 813 129 6054'}</span>
             </a>
             <button 
               onClick={() => handleNav('/request-quote')}

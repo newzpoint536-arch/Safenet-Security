@@ -93,7 +93,7 @@ export const RequestQuotePage: React.FC = () => {
                     Submit Another Inquiry
                   </button>
                   <a
-                    href={`tel:${siteSettings.phone.replace(/\s+/g, '')}`}
+                    href={`tel:${(siteSettings?.phone || '+234 813 129 6054').replace(/\s+/g, '')}`}
                     className="text-white hover:text-amber-400 font-semibold"
                   >
                     Call Operations Desk
@@ -359,15 +359,15 @@ export const RequestQuotePage: React.FC = () => {
 
               <div className="pt-2 space-y-2">
                 <a
-                  href={`tel:${siteSettings.phone.replace(/\s+/g, '')}`}
+                  href={`tel:${(siteSettings?.phone || '+234 813 129 6054').replace(/\s+/g, '')}`}
                   className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-semibold flex items-center gap-2 transition-colors border border-slate-700"
                 >
                   <Phone className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>{siteSettings.phone}</span>
+                  <span>{siteSettings?.phone || '+234 813 129 6054'}</span>
                 </a>
 
                 <a
-                  href={`https://wa.me/${siteSettings.whatsapp.replace(/[^0-9]/g, '')}`}
+                  href={`https://wa.me/${(siteSettings?.whatsapp || '+234 813 129 6054').replace(/[^0-9]/g, '')}`}
                   target="_blank"
                   rel="noreferrer"
                   className="w-full py-2.5 px-4 bg-emerald-600/90 hover:bg-emerald-600 text-white rounded text-xs font-semibold flex items-center gap-2 transition-colors"

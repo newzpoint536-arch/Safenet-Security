@@ -1,6 +1,17 @@
 {
   "leads": [
     {
+      "id": "lead-1792261501855-2307",
+      "createdAt": "2026-10-17T18:25:01.855Z",
+      "status": "new",
+      "notes": [],
+      "fullName": "Alhaji Musa Danjuma",
+      "phone": "+234 803 555 1234",
+      "email": "musa@danjumagroup.ng",
+      "serviceRequired": "Manned Guarding & Tactical Response",
+      "location": "Abuja CBD"
+    },
+    {
       "id": "lead-1792154084927-3146",
       "createdAt": "2026-10-16T12:34:44.927Z",
       "status": "new",
@@ -360,6 +371,37 @@
   ],
   "auditLogs": [
     {
+      "id": "audit-1792351254021-2182",
+      "timestamp": "2026-10-18T19:20:54.021Z",
+      "user": "Unknown (owner@safenetsecurityltd.com)",
+      "action": "OWNER_RECOVERY_INVALID_SECRET",
+      "target": "Security Authorization Gateway",
+      "details": "Failed owner recovery attempt with invalid authorization secret. 2 attempts remaining.",
+      "ip": "127.0.0.1",
+      "hash": "9ce75f208827cc92c48806a70f16d38d63e93c66f5061963d8cbca8a8d7db003",
+      "prevHash": "GENESIS-SAFENET-SECURE-ANCHOR-000"
+    },
+    {
+      "id": "audit-1792261501855",
+      "timestamp": "2026-10-17T18:25:01.855Z",
+      "user": "Inquirer (Alhaji Musa Danjuma)",
+      "action": "LEAD_SUBMITTED",
+      "target": "Commercial Leads Vault",
+      "details": "Quote inquiry received for Manned Guarding & Tactical Response in Abuja CBD.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1792261485876-9315",
+      "timestamp": "2026-10-17T18:24:45.876Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "ADMIN_LOGIN_SUCCESS",
+      "target": "Operations Command Console",
+      "details": "Authenticated with role [super_admin]. Session established.",
+      "ip": "127.0.0.1",
+      "hash": "a6cfde79cf9fafbbf6fae9e5f7f40270b34befcdd97cc52f49f27600dcb569ce",
+      "prevHash": "16f0571d7c778bde3dd196ec0d17b75f1363812310b96640292ef60074a73a3a"
+    },
+    {
       "id": "audit-1792261480650-2828",
       "timestamp": "2026-10-17T18:24:40.650Z",
       "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
@@ -548,9 +590,9 @@
       "recoveryPassphraseSalt": "72304b9c8e38d06000264b68040d1d7453599e1d1f902c935da659c7e6492d09",
       "recoveryPassphraseIterations": 210000,
       "createdAt": "2026-10-17T18:23:43.636Z",
-      "lastLogin": "2026-10-17T18:24:21.773Z",
+      "lastLogin": "2026-10-17T18:24:45.876Z",
       "status": "active"
     }
   ],
-  "updatedAt": "2026-10-17T18:24:40.651Z"
+  "updatedAt": "2026-10-18T19:20:54.024Z"
 }

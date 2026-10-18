@@ -89,12 +89,12 @@ export const AdminCommandCentre: React.FC = () => {
   const [leadNoteInput, setLeadNoteInput] = useState('');
 
   // Settings State
-  const [settingsPhone, setSettingsPhone] = useState(siteSettings.phone);
-  const [settingsEmail, setSettingsEmail] = useState(siteSettings.email);
-  const [settingsWhatsApp, setSettingsWhatsApp] = useState(siteSettings.whatsapp);
-  const [settingsTrainedGuards, setSettingsTrainedGuards] = useState(siteSettings.stats.trainedGuards);
-  const [settingsResponseTime, setSettingsResponseTime] = useState(siteSettings.stats.responseTime);
-  const [settingsSocialMode, setSettingsSocialMode] = useState<'manual_approval' | 'auto_publish'>(siteSettings.socialPublishingMode);
+  const [settingsPhone, setSettingsPhone] = useState(siteSettings?.phone || '+234 813 129 6054');
+  const [settingsEmail, setSettingsEmail] = useState(siteSettings?.email || 'info@safenetsecurityltd.com');
+  const [settingsWhatsApp, setSettingsWhatsApp] = useState(siteSettings?.whatsapp || '+234 813 129 6054');
+  const [settingsTrainedGuards, setSettingsTrainedGuards] = useState(siteSettings?.stats?.trainedGuards || '500+');
+  const [settingsResponseTime, setSettingsResponseTime] = useState(siteSettings?.stats?.responseTime || '24/7');
+  const [settingsSocialMode, setSettingsSocialMode] = useState<'manual_approval' | 'auto_publish'>(siteSettings?.socialPublishingMode || 'manual_approval');
 
   const selectedLead = leads.find(l => l.id === selectedLeadId);
 

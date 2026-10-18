@@ -55,9 +55,9 @@ export const Footer: React.FC = () => {
             </p>
             <div className="pt-2 text-xs space-y-1.5">
               <div className="text-slate-300 font-medium">Head Office (UK):</div>
-              <div className="text-slate-400 text-[11px]">{siteSettings.addressUK}</div>
+              <div className="text-slate-400 text-[11px]">{siteSettings?.addressUK || '85 Great Portland Street, First Floor, London, W1W 7LT, United Kingdom'}</div>
               <div className="text-slate-300 font-medium pt-1">Operations (Nigeria):</div>
-              <div className="text-slate-400 text-[11px]">{siteSettings.addressNigeria}</div>
+              <div className="text-slate-400 text-[11px]">{siteSettings?.addressNigeria || 'Plot 14, Commercial Avenue, Victoria Island, Lagos, Nigeria'}</div>
             </div>
           </div>
 
@@ -210,19 +210,19 @@ export const Footer: React.FC = () => {
             </h4>
             <div className="space-y-2.5 text-xs">
               <a 
-                href={`tel:${siteSettings.phone.replace(/\s+/g, '')}`}
+                href={`tel:${(siteSettings?.phone || '+234 813 129 6054').replace(/\s+/g, '')}`}
                 className="flex items-center gap-2 text-white hover:text-amber-400 transition-colors font-medium"
               >
                 <Phone className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>{siteSettings.phone}</span>
+                <span>{siteSettings?.phone || '+234 813 129 6054'}</span>
               </a>
 
               <a 
-                href={`mailto:${siteSettings.email}`}
+                href={`mailto:${siteSettings?.email || 'info@safenetsecurityltd.com'}`}
                 className="flex items-center gap-2 hover:text-amber-400 transition-colors truncate"
               >
                 <Mail className="w-4 h-4 text-amber-400 shrink-0" />
-                <span className="truncate">{siteSettings.email}</span>
+                <span className="truncate">{siteSettings?.email || 'info@safenetsecurityltd.com'}</span>
               </a>
 
               <div className="flex items-start gap-2 pt-1 text-slate-400">
@@ -237,7 +237,7 @@ export const Footer: React.FC = () => {
               </div>
               <div className="flex items-center gap-2.5">
                 <a 
-                  href={siteSettings.socialLinks.linkedin} 
+                  href={siteSettings?.socialLinks?.linkedin || 'https://linkedin.com/company/safenet-security-solutions-ltd'} 
                   target="_blank" 
                   rel="noreferrer"
                   className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-amber-400 hover:border-amber-400/40 transition-colors"
@@ -246,7 +246,7 @@ export const Footer: React.FC = () => {
                   <span className="text-xs font-bold font-mono">in</span>
                 </a>
                 <a 
-                  href={siteSettings.socialLinks.facebook} 
+                  href={siteSettings?.socialLinks?.facebook || 'https://www.facebook.com/share/1H3ow82i4q'} 
                   target="_blank" 
                   rel="noreferrer"
                   className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-amber-400 hover:border-amber-400/40 transition-colors"
@@ -255,7 +255,7 @@ export const Footer: React.FC = () => {
                   <span className="text-xs font-bold font-mono">fb</span>
                 </a>
                 <a 
-                  href={siteSettings.socialLinks.x} 
+                  href={siteSettings?.socialLinks?.x || 'https://x.com/LtdSafenet10159'} 
                   target="_blank" 
                   rel="noreferrer"
                   className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-amber-400 hover:border-amber-400/40 transition-colors"
@@ -264,7 +264,7 @@ export const Footer: React.FC = () => {
                   <span className="text-xs font-bold font-mono">X</span>
                 </a>
                 <a 
-                  href={siteSettings.socialLinks.instagram} 
+                  href={siteSettings?.socialLinks?.instagram || 'https://www.instagram.com/invites/contact/?utm_source=ig_contact_invite&utm_medium=copy_link&utm_content=itpgcrs'} 
                   target="_blank" 
                   rel="noreferrer"
                   className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-amber-400 hover:border-amber-400/40 transition-colors"
@@ -273,7 +273,7 @@ export const Footer: React.FC = () => {
                   <span className="text-xs font-bold font-mono">ig</span>
                 </a>
                 <a 
-                  href={siteSettings.socialLinks.youtube} 
+                  href={siteSettings?.socialLinks?.youtube || 'https://youtube.com/@safenetsecurityltd'} 
                   target="_blank" 
                   rel="noreferrer"
                   className="w-8 h-8 rounded bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-red-400 hover:border-red-400/40 transition-colors"
@@ -290,7 +290,7 @@ export const Footer: React.FC = () => {
         {/* Bottom Bar */}
         <div className="pt-12 mt-12 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <div>
-            &copy; {new Date().getFullYear()} {siteSettings.companyName}. All rights reserved. RC Registered in Nigeria & UK.
+            &copy; {new Date().getFullYear()} {siteSettings?.companyName || 'SafeNet Security Solutions Ltd'}. All rights reserved. RC Registered in Nigeria & UK.
           </div>
           <div className="flex items-center gap-6">
             <button onClick={() => navigate('/licences-compliance')} className="hover:text-white transition-colors">

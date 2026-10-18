@@ -23,7 +23,8 @@ export const AdminLoginPage: React.FC = () => {
     adminUser, 
     loginAdmin, 
     setupInitialSuperAdmin,
-    resetAdminPassword 
+    resetAdminPassword,
+    ownerRecoveryAdmin
   } = useApp();
 
   // Status check for initial provisioning
@@ -48,13 +49,24 @@ export const AdminLoginPage: React.FC = () => {
   const [showSetupPassword, setShowSetupPassword] = useState(false);
   const [setupSuccess, setSetupSuccess] = useState(false);
 
-  // Recovery / Forgot Password State
+  // Emergency Recovery Passphrase Modal State
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryPassphrase, setRecoveryPassphrase] = useState('');
   const [recoveryNewPassword, setRecoveryNewPassword] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryMessage, setRecoveryMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Server-Authorized Owner Recovery Modal State
+  const [showOwnerRecoveryModal, setShowOwnerRecoveryModal] = useState(false);
+  const [ownerSecret, setOwnerSecret] = useState('');
+  const [ownerEmail, setOwnerEmail] = useState('');
+  const [ownerName, setOwnerName] = useState('');
+  const [ownerPassword, setOwnerPassword] = useState('');
+  const [ownerConfirmPassword, setOwnerConfirmPassword] = useState('');
+  const [ownerRecoveryPass, setOwnerRecoveryPass] = useState('');
+  const [ownerLoading, setOwnerLoading] = useState(false);
+  const [ownerMessage, setOwnerMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // If already authenticated, redirect to dashboard
   useEffect(() => {
@@ -212,6 +224,61 @@ export const AdminLoginPage: React.FC = () => {
       setRecoveryMessage({ type: 'error', text: err.message || 'Failed to reset password.' });
     } finally {
       setRecoveryLoading(false);
+    }
+  };
+
+  // Handle Server-Authorized Owner Privilege Recovery
+  const handleOwnerRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOwnerMessage(null);
+
+    if (!ownerSecret.trim() || !ownerEmail.trim() || !ownerPassword) {
+      setOwnerMessage({ type: 'error', text: 'Authorization secret, new email, and master password are required.' });
+      return;
+    }
+
+    const complexity = checkPasswordComplexity(ownerPassword);
+    if (!complexity.valid) {
+      setOwnerMessage({ type: 'error', text: complexity.reason || 'New password does not meet security requirements.' });
+      return;
+    }
+
+    if (ownerPassword !== ownerConfirmPassword) {
+      setOwnerMessage({ type: 'error', text: 'Master password confirmation does not match.' });
+      return;
+    }
+
+    if (ownerRecoveryPass && ownerRecoveryPass.length < 10) {
+      setOwnerMessage({ type: 'error', text: 'Emergency recovery passphrase must be at least 10 characters if provided.' });
+      return;
+    }
+
+    setOwnerLoading(true);
+    try {
+      const result = await ownerRecoveryAdmin({
+        recoverySecret: ownerSecret.trim(),
+        newEmail: ownerEmail.trim(),
+        newName: ownerName.trim() || undefined,
+        newPassword: ownerPassword,
+        newRecoveryPassphrase: ownerRecoveryPass.trim() || undefined
+      });
+
+      if (result.success) {
+        setOwnerMessage({
+          type: 'success',
+          text: 'Super Administrator credentials recovered successfully! Access established.'
+        });
+        setTimeout(() => {
+          setShowOwnerRecoveryModal(false);
+          navigate('/admin/dashboard');
+        }, 1200);
+      } else {
+        setOwnerMessage({ type: 'error', text: result.error || 'Owner recovery failed. Verify authorization secret.' });
+      }
+    } catch (err: any) {
+      setOwnerMessage({ type: 'error', text: err.message || 'Error occurred during owner recovery.' });
+    } finally {
+      setOwnerLoading(false);
     }
   };
 
@@ -451,13 +518,25 @@ export const AdminLoginPage: React.FC = () => {
                       <Lock className="w-3.5 h-3.5 text-slate-400" />
                       <span>Security Passphrase</span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowRecoveryModal(true)}
-                      className="text-[11px] text-amber-400/90 hover:text-amber-300 transition-colors"
-                    >
-                      Emergency Recovery?
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowRecoveryModal(true)}
+                        className="text-[11px] text-slate-400 hover:text-slate-300 transition-colors"
+                      >
+                        Passphrase Reset
+                      </button>
+                      <span className="text-slate-700">·</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowOwnerRecoveryModal(true)}
+                        className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors font-semibold flex items-center gap-1"
+                        title="Authorized Server Owner Credential Recovery"
+                      >
+                        <KeyRound className="w-3 h-3 text-amber-400" />
+                        <span>Owner Recovery</span>
+                      </button>
+                    </div>
                   </div>
                   <div className="relative">
                     <input
@@ -604,6 +683,186 @@ export const AdminLoginPage: React.FC = () => {
                     <span>Update Credentials</span>
                   )}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Server-Authorized Owner Credential Recovery Modal */}
+      {showOwnerRecoveryModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-lg bg-slate-900 border border-amber-500/30 rounded-xl p-6 shadow-2xl space-y-4 my-8">
+            <div className="flex justify-between items-start pb-3 border-b border-slate-800">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                    <Shield className="w-4 h-4 stroke-[2.2]" />
+                  </div>
+                  <h3 className="text-sm font-bold text-white font-display">
+                    SafeNet Directorate — Owner Credential Recovery
+                  </h3>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Requires server-side verification of a one-time recovery authorization secret (<code className="text-amber-300 font-mono text-[10px]">OWNER_RECOVERY_KEY</code> or server token).
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowOwnerRecoveryModal(false);
+                  setOwnerMessage(null);
+                }}
+                className="text-slate-400 hover:text-white text-xs px-2 py-1 rounded hover:bg-slate-800"
+              >
+                Close
+              </button>
+            </div>
+
+            {ownerMessage && (
+              <div className={`p-3 rounded-lg text-xs leading-relaxed flex items-start gap-2 ${
+                ownerMessage.type === 'success' 
+                  ? 'bg-emerald-950/70 border border-emerald-800 text-emerald-200' 
+                  : 'bg-red-950/70 border border-red-800 text-red-200'
+              }`}>
+                {ownerMessage.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                )}
+                <span>{ownerMessage.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleOwnerRecovery} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Server-Authorized One-Time Recovery Secret</span>
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={ownerSecret}
+                  onChange={(e) => setOwnerSecret(e.target.value)}
+                  placeholder="Enter OWNER_RECOVERY_KEY or server token"
+                  className="w-full bg-slate-950 border border-amber-500/40 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-400"
+                />
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Supplied via secure server environment variable or generated protected token file. Single-use only.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">
+                    New Official Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={ownerEmail}
+                    onChange={(e) => setOwnerEmail(e.target.value)}
+                    placeholder="owner@safenetsecurityltd.com"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">
+                    Administrator Full Name (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    placeholder="e.g., Capt. Emmanuel Adeleke (Rtd.)"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-slate-300 font-medium">
+                    New Master Passphrase
+                  </label>
+                  <span className="text-[10px] text-amber-400 font-mono">Min. 10 Chars</span>
+                </div>
+                <input
+                  type="password"
+                  required
+                  value={ownerPassword}
+                  onChange={(e) => setOwnerPassword(e.target.value)}
+                  placeholder="Min. 10 chars (A-Z, a-z, 0-9, symbol)"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-400"
+                />
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Must contain uppercase, lowercase, digit, and special symbol (OWASP 210,000 PBKDF2-SHA512).
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">
+                  Confirm Master Passphrase
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={ownerConfirmPassword}
+                  onChange={(e) => setOwnerConfirmPassword(e.target.value)}
+                  placeholder="Re-enter new master passphrase"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-slate-300 font-medium">
+                    New Emergency Recovery Passphrase (Optional)
+                  </label>
+                  <span className="text-[10px] text-slate-500">For future resets</span>
+                </div>
+                <input
+                  type="text"
+                  value={ownerRecoveryPass}
+                  onChange={(e) => setOwnerRecoveryPass(e.target.value)}
+                  placeholder="e.g., SafeNet-Delta-Reserve-2026"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-3">
+                <div className="text-[10px] text-slate-500 leading-tight">
+                  All previous sessions revoked immediately. Authorization burned upon execution.
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowOwnerRecoveryModal(false);
+                      setOwnerMessage(null);
+                    }}
+                    className="px-3 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={ownerLoading}
+                    className="px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-md"
+                  >
+                    {ownerLoading ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Verifying & Recovering...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Recover Administrator Access</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
