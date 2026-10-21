@@ -100,7 +100,7 @@ export const CinematicHeroSlider: React.FC = () => {
             />
 
             {/* Measured Scrim & Gradient Overlays for WCAG AA readability */}
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/45 via-slate-950/40 to-slate-950/40" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/45 via-slate-950/40 to-slate-950/20" />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/50" />
             
             {/* Subtle Security Grid Pattern */}
