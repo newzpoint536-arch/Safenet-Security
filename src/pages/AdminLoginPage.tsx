@@ -15,6 +15,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { apiUrl } from '../lib/api';
 
 export const AdminLoginPage: React.FC = () => {
   const { 
@@ -79,7 +80,7 @@ export const AdminLoginPage: React.FC = () => {
   useEffect(() => {
     async function checkStatus() {
       try {
-        const res = await fetch('/api/admin/setup-status');
+        const res = await fetch(apiUrl('/api/admin/setup-status'), { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
           setIsSetupCompleted(Boolean(data.isSetup));

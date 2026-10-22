@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
+import { apiUrl } from '../../lib/api';
 import { getPageSecurityContext, PageSecurityContext } from '../../data/pageContextMap';
 import { 
   Bot, 
@@ -302,7 +303,7 @@ export const SafeNetAiAgent: React.FC = () => {
         });
       }
 
-      const res = await fetch('/api/chat', {
+      const res = await fetch(apiUrl('/api/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

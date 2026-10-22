@@ -37,6 +37,7 @@ import {
   initialCareerOpenings,
   initialAuditLogs
 } from '../data/initialData';
+import { apiUrl } from '../lib/api';
 
 interface AppContextType {
   // Navigation
@@ -295,7 +296,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const refreshNotifications = async () => {
     try {
-      const res = await fetch('/api/notifications');
+      const res = await fetch(apiUrl('/api/notifications'), { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.notifications)) {
@@ -317,7 +318,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (csrfToken) {
         headers['X-CSRF-Token'] = csrfToken;
       }
-      await fetch('/api/db/sync', {
+      await fetch(apiUrl('/api/db/sync'), {
         method: 'POST',
         credentials: 'include',
         headers,
@@ -342,7 +343,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Load database state from server (authenticated receives full CRM via HttpOnly cookie; unauthenticated receives public content)
   const loadServerData = async () => {
     try {
-      const res = await fetch('/api/db/state', { 
+      const res = await fetch(apiUrl('/api/db/state'), { 
         credentials: 'include' 
       });
       const json = await res.json();
@@ -372,7 +373,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sessionStorage.removeItem('safenet_admin_session_token');
     } catch {}
 
-    fetch('/api/admin/me', {
+    fetch(apiUrl('/api/admin/me'), {
       credentials: 'include'
     })
       .then(res => res.json())
@@ -403,7 +404,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Admin Login Action (HttpOnly cookie set by server; CSRF token captured in state)
   const loginAdmin = async (emailInput: string, passwordInput: string) => {
     try {
-      const res = await fetch('/api/admin/login', {
+      const res = await fetch(apiUrl('/api/admin/login'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -431,7 +432,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (csrfToken) {
         headers['X-CSRF-Token'] = csrfToken;
       }
-      await fetch('/api/admin/logout', {
+      await fetch(apiUrl('/api/admin/logout'), {
         method: 'POST',
         credentials: 'include',
         headers
@@ -459,7 +460,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setupKey?: string;
   }) => {
     try {
-      const res = await fetch('/api/admin/setup-initial', {
+      const res = await fetch(apiUrl('/api/admin/setup-initial'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -483,7 +484,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Reset Password Action
   const resetAdminPassword = async (emailInput: string, recoveryPass: string, newPass: string) => {
     try {
-      const res = await fetch('/api/admin/reset-password', {
+      const res = await fetch(apiUrl('/api/admin/reset-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -511,7 +512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     newRecoveryPassphrase?: string;
   }) => {
     try {
-      const res = await fetch('/api/admin/owner-recovery', {
+      const res = await fetch(apiUrl('/api/admin/owner-recovery'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -593,7 +594,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
-      const res = await fetch('/api/proposals/generate', {
+      const res = await fetch(apiUrl('/api/proposals/generate'), {
         method: 'POST',
         credentials: 'include',
         headers,
@@ -687,7 +688,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLeads(prev => [newLead, ...prev]);
 
     // Dispatch directly to server public ingestion endpoint
-    fetch('/api/public/leads', {
+    fetch(apiUrl('/api/public/leads'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(leadData)
@@ -754,7 +755,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setSecurityAssessments(prev => [newSubmission, ...prev]);
 
-    fetch('/api/public/assessments', {
+    fetch(apiUrl('/api/public/assessments'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -793,7 +794,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setJobApplications(prev => [newApp, ...prev]);
 
-    fetch('/api/public/careers', {
+    fetch(apiUrl('/api/public/careers'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(app)
@@ -843,7 +844,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         postId: post.id,
         postTitle: post.title,
         platform,
-        status: siteSettings.socialPublishingMode === 'auto_publish' ? 'published' : 'queued',
+        status: (siteSettings?.socialPublishingMode || 'manual_approval') === 'auto_publish' ? 'published' : 'queued',
         date: new Date().toISOString(),
         postUrl: `https://${platform}.com/safenetsecurityltd/status/${Date.now().toString().slice(-6)}`,
         caption,
@@ -935,7 +936,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
-      const res = await fetch('/api/social/publish', {
+      const res = await fetch(apiUrl('/api/social/publish'), {
         method: 'POST',
         credentials: 'include',
         headers,

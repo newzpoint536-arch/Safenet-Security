@@ -10,6 +10,7 @@ import type { AdminRole, AuditLog } from '../types/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const OWNER_RECOVERY_TOKEN_FILE = path.resolve(__dirname, '../../data/.owner_recovery_token');
+const OWNER_RECOVERY_VAULT_FILE = path.resolve(__dirname, '../../data/.owner_recovery_vault');
 
 const pbkdf2Async = util.promisify(crypto.pbkdf2);
 
@@ -557,6 +558,10 @@ export function invalidateAllUserSessions(userId: string) {
   }
 }
 
+export function revokeAllSessions() {
+  activeSessions.clear();
+}
+
 // ==========================================
 // 8. EMERGENCY CREDENTIAL RECOVERY
 // ==========================================
@@ -667,47 +672,133 @@ export async function resetPasswordWithPassphrase(
 // 8B. ONE-TIME OWNER PRIVILEGE RECOVERY
 // ==========================================
 
+export const COMPROMISED_RECOVERY_KEY_HASH = 'e76c0fa479a69a997bf2471eda535fc217ab94c5166432b5b25344440b0acdbc';
+
 let isOwnerRecoveryBurned = false;
 
 export function getOrGenerateOwnerRecoverySecret(): string {
   if (isOwnerRecoveryBurned) return '';
 
+  const db = readDatabase();
+  const invalidated = new Set<string>([
+    COMPROMISED_RECOVERY_KEY_HASH,
+    ...((db && db.securityState && db.securityState.invalidatedSecretHashes) || [])
+  ]);
+
+  // If permanently disabled in database
+  if (db && db.securityState && db.securityState.ownerRecoveryDisabled) {
+    // Check if explicitly reauthorized by server operator via secure environment variables
+    if (process.env.REAUTHORIZE_OWNER_RECOVERY === 'true' && process.env.OWNER_RECOVERY_KEY) {
+      const key = process.env.OWNER_RECOVERY_KEY.trim();
+      const candidateHash = crypto.createHash('sha256').update(key).digest('hex');
+      if (!invalidated.has(candidateHash)) {
+        return key;
+      }
+    }
+    // Delete any lingering token file if recovery is disabled
+    try {
+      if (fs.existsSync(OWNER_RECOVERY_TOKEN_FILE)) {
+        fs.unlinkSync(OWNER_RECOVERY_TOKEN_FILE);
+      }
+    } catch {}
+    return '';
+  }
+
   // 1. Check environment variable first
   if (process.env.OWNER_RECOVERY_KEY && process.env.OWNER_RECOVERY_KEY.trim().length > 0) {
-    return process.env.OWNER_RECOVERY_KEY.trim();
+    const envKey = process.env.OWNER_RECOVERY_KEY.trim();
+    const candidateHash = crypto.createHash('sha256').update(envKey).digest('hex');
+    if (!invalidated.has(candidateHash)) {
+      return envKey;
+    }
   }
 
   // 2. Check server-protected one-time token file in /data/.owner_recovery_token
   try {
     if (fs.existsSync(OWNER_RECOVERY_TOKEN_FILE)) {
       const stored = fs.readFileSync(OWNER_RECOVERY_TOKEN_FILE, 'utf-8').trim();
-      if (stored.length > 0) return stored;
+      if (stored.length > 0) {
+        const fileHash = crypto.createHash('sha256').update(stored).digest('hex');
+        if (!invalidated.has(fileHash)) {
+          return stored;
+        } else {
+          // Token is invalidated or compromised — unlink immediately
+          try {
+            fs.unlinkSync(OWNER_RECOVERY_TOKEN_FILE);
+          } catch {}
+        }
+      }
     }
-
-    // 3. Generate high-entropy 256-bit cryptographically secure one-time recovery key
-    const generated = 'SFN-OWNER-' + crypto.randomBytes(24).toString('hex').toUpperCase();
-    const dataDir = path.dirname(OWNER_RECOVERY_TOKEN_FILE);
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    fs.writeFileSync(OWNER_RECOVERY_TOKEN_FILE, generated, { encoding: 'utf-8', mode: 0o600 });
-    console.log('\n================================================================');
-    console.log(' [SAFENET SECURITY] ONE-TIME OWNER RECOVERY AUTHORIZATION SECRET:');
-    console.log(` ${generated}`);
-    console.log(' Use this key on /admin/login under "Owner Recovery" to reset credentials.');
-    console.log(' Once used, this key will be permanently burned and disabled.');
-    console.log('================================================================\n');
-    return generated;
   } catch (err) {
     console.warn('[SafeNet Security] Could not access owner recovery token file:', err);
-    return '';
   }
+
+  // No active recovery authorization secret exists
+  return '';
 }
 
 export function isOwnerRecoveryAvailable(): boolean {
-  if (isOwnerRecoveryBurned) return false;
-  const secret = getOrGenerateOwnerRecoverySecret();
-  return Boolean(secret && secret.length > 0);
+  const db = readDatabase();
+  if (isOwnerRecoveryBurned && (!db || !db.securityState || db.securityState.ownerRecoveryDisabled !== false || !db.securityState.recoverySecretHash)) {
+    return false;
+  }
+  const invalidated = new Set<string>([
+    COMPROMISED_RECOVERY_KEY_HASH,
+    ...((db && db.securityState && db.securityState.invalidatedSecretHashes) || [])
+  ]);
+
+  if (db && db.securityState && db.securityState.ownerRecoveryDisabled) {
+    if (process.env.REAUTHORIZE_OWNER_RECOVERY === 'true' && process.env.OWNER_RECOVERY_KEY) {
+      const candidateHash = crypto.createHash('sha256').update(process.env.OWNER_RECOVERY_KEY.trim()).digest('hex');
+      if (!invalidated.has(candidateHash)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // 1. Check if protected PBKDF2 representation is stored in database
+  if (db && db.securityState && db.securityState.recoverySecretHash && db.securityState.recoverySecretSalt) {
+    return true;
+  }
+
+  // 2. Check environment variable
+  if (process.env.OWNER_RECOVERY_KEY && process.env.OWNER_RECOVERY_KEY.trim().length > 0) {
+    const candidateHash = crypto.createHash('sha256').update(process.env.OWNER_RECOVERY_KEY.trim()).digest('hex');
+    if (!invalidated.has(candidateHash)) {
+      return true;
+    }
+  }
+
+  // 3. Check protected server vault file
+  if (fs.existsSync(OWNER_RECOVERY_VAULT_FILE)) {
+    try {
+      const stored = fs.readFileSync(OWNER_RECOVERY_VAULT_FILE, 'utf-8').trim();
+      if (stored.length > 0) {
+        const fileHash = crypto.createHash('sha256').update(stored).digest('hex');
+        if (!invalidated.has(fileHash)) {
+          return true;
+        }
+      }
+    } catch {}
+  }
+
+  // 4. Check legacy one-time token file in /data/.owner_recovery_token
+  if (fs.existsSync(OWNER_RECOVERY_TOKEN_FILE)) {
+    try {
+      const stored = fs.readFileSync(OWNER_RECOVERY_TOKEN_FILE, 'utf-8').trim();
+      if (stored.length > 0) {
+        const fileHash = crypto.createHash('sha256').update(stored).digest('hex');
+        if (!invalidated.has(fileHash)) {
+          return true;
+        } else {
+          try { fs.unlinkSync(OWNER_RECOVERY_TOKEN_FILE); } catch {}
+        }
+      }
+    } catch {}
+  }
+
+  return false;
 }
 
 export async function recoverSuperAdminWithSecret(data: {
@@ -718,15 +809,49 @@ export async function recoverSuperAdminWithSecret(data: {
   newRecoveryPassphrase?: string;
   ip: string;
 }): Promise<{ user: ReturnType<typeof sanitizeUser>; session: AdminSession }> {
-  if (isOwnerRecoveryBurned) {
-    throw new Error('Owner recovery authorization has already been consumed or permanently disabled.');
+  const db = readDatabase();
+  if (!db) {
+    throw new Error('Database service is unavailable.');
   }
 
-  const serverSecret = getOrGenerateOwnerRecoverySecret();
-  if (!serverSecret) {
-    throw new Error('Owner recovery authorization is not active on this server.');
+  const invalidatedHashes = new Set<string>([
+    COMPROMISED_RECOVERY_KEY_HASH,
+    ...((db.securityState && db.securityState.invalidatedSecretHashes) || [])
+  ]);
+
+  const rawSecret = data.recoverySecret.trim();
+  const providedSecretHash = crypto.createHash('sha256').update(rawSecret).digest('hex');
+
+  // 1. Check if secret has been permanently invalidated / compromised
+  if (invalidatedHashes.has(providedSecretHash)) {
+    const rateLimitKey = `owner-recovery:${data.ip}`;
+    recordFailedAttempt(rateLimitKey, 3, 30 * 60 * 1000);
+    appendTamperEvidentAuditLog(db, {
+      user: `Unknown (${data.newEmail || 'Anonymous'})`,
+      action: 'OWNER_RECOVERY_COMPROMISED_SECRET_REJECTED',
+      target: 'Security Authorization Gateway',
+      details: 'Attempted use of permanently invalidated/compromised owner recovery secret. Request rejected.',
+      ip: data.ip
+    });
+    writeDatabase(db);
+    throw new Error('This recovery authorization key has been permanently invalidated and cannot be used.');
   }
 
+  // 2. Check persistent disablement across restarts and deployments
+  const isPersistentlyDisabled = (db.securityState && db.securityState.ownerRecoveryDisabled === true) || 
+    (isOwnerRecoveryBurned && (!db.securityState || db.securityState.ownerRecoveryDisabled !== false || !db.securityState.recoverySecretHash));
+
+  if (isPersistentlyDisabled) {
+    const isReauthorized = process.env.REAUTHORIZE_OWNER_RECOVERY === 'true' &&
+      process.env.OWNER_RECOVERY_KEY &&
+      !invalidatedHashes.has(crypto.createHash('sha256').update(process.env.OWNER_RECOVERY_KEY.trim()).digest('hex'));
+
+    if (!isReauthorized) {
+      throw new Error('Owner recovery authorization has already been permanently disabled on this system.');
+    }
+  }
+
+  // 3. Rate limiting check
   const rateLimitKey = `owner-recovery:${data.ip}`;
   const rateCheck = checkRateLimit(rateLimitKey);
   if (!rateCheck.allowed) {
@@ -735,28 +860,73 @@ export async function recoverSuperAdminWithSecret(data: {
     );
   }
 
-  // Timing-safe comparison to prevent side-channel timing analysis
-  const providedBuf = Buffer.from(data.recoverySecret.trim());
-  const expectedBuf = Buffer.from(serverSecret.trim());
-
+  // 4. Verify candidate secret against stored cryptographic representations
   let isAuthorized = false;
-  if (providedBuf.length === expectedBuf.length) {
-    isAuthorized = crypto.timingSafeEqual(providedBuf, expectedBuf);
+
+  // Verification Mode A: Stored PBKDF2-SHA512 hash in database
+  if (db.securityState && db.securityState.recoverySecretHash && db.securityState.recoverySecretSalt) {
+    const iterations = db.securityState.recoverySecretIterations || RECOMMENDED_ITERATIONS;
+    isAuthorized = await verifyPasswordAsync(
+      rawSecret,
+      db.securityState.recoverySecretSalt,
+      db.securityState.recoverySecretHash,
+      iterations
+    );
+  }
+
+  // Verification Mode B: Environment variable OWNER_RECOVERY_KEY (timing-safe)
+  if (!isAuthorized && process.env.OWNER_RECOVERY_KEY && process.env.OWNER_RECOVERY_KEY.trim().length > 0) {
+    const envKey = process.env.OWNER_RECOVERY_KEY.trim();
+    const envKeyHash = crypto.createHash('sha256').update(envKey).digest('hex');
+    if (!invalidatedHashes.has(envKeyHash)) {
+      const providedBuf = Buffer.from(rawSecret);
+      const expectedBuf = Buffer.from(envKey);
+      if (providedBuf.length === expectedBuf.length && crypto.timingSafeEqual(providedBuf, expectedBuf)) {
+        isAuthorized = true;
+      }
+    }
+  }
+
+  // Verification Mode C: Protected server vault file (timing-safe)
+  if (!isAuthorized && fs.existsSync(OWNER_RECOVERY_VAULT_FILE)) {
+    try {
+      const stored = fs.readFileSync(OWNER_RECOVERY_VAULT_FILE, 'utf-8').trim();
+      const vaultHash = crypto.createHash('sha256').update(stored).digest('hex');
+      if (!invalidatedHashes.has(vaultHash)) {
+        const providedBuf = Buffer.from(rawSecret);
+        const expectedBuf = Buffer.from(stored);
+        if (providedBuf.length === expectedBuf.length && crypto.timingSafeEqual(providedBuf, expectedBuf)) {
+          isAuthorized = true;
+        }
+      }
+    } catch {}
+  }
+
+  // Verification Mode D: Legacy token file in /data/.owner_recovery_token (timing-safe)
+  if (!isAuthorized && fs.existsSync(OWNER_RECOVERY_TOKEN_FILE)) {
+    try {
+      const stored = fs.readFileSync(OWNER_RECOVERY_TOKEN_FILE, 'utf-8').trim();
+      const tokenHash = crypto.createHash('sha256').update(stored).digest('hex');
+      if (!invalidatedHashes.has(tokenHash)) {
+        const providedBuf = Buffer.from(rawSecret);
+        const expectedBuf = Buffer.from(stored);
+        if (providedBuf.length === expectedBuf.length && crypto.timingSafeEqual(providedBuf, expectedBuf)) {
+          isAuthorized = true;
+        }
+      }
+    } catch {}
   }
 
   if (!isAuthorized) {
     const { attemptsLeft, locked } = recordFailedAttempt(rateLimitKey, 3, 30 * 60 * 1000);
-    const db = readDatabase();
-    if (db) {
-      appendTamperEvidentAuditLog(db, {
-        user: `Unknown (${data.newEmail || 'Anonymous'})`,
-        action: 'OWNER_RECOVERY_INVALID_SECRET',
-        target: 'Security Authorization Gateway',
-        details: `Failed owner recovery attempt with invalid authorization secret. ${attemptsLeft} attempts remaining.`,
-        ip: data.ip
-      });
-      writeDatabase(db);
-    }
+    appendTamperEvidentAuditLog(db, {
+      user: `Unknown (${data.newEmail || 'Anonymous'})`,
+      action: 'OWNER_RECOVERY_INVALID_SECRET',
+      target: 'Security Authorization Gateway',
+      details: `Failed owner recovery attempt with invalid authorization secret. ${attemptsLeft} attempts remaining.`,
+      ip: data.ip
+    });
+    writeDatabase(db);
 
     if (locked) {
       throw new Error('Maximum owner recovery attempts exceeded. Operation locked for 30 minutes.');
@@ -764,13 +934,8 @@ export async function recoverSuperAdminWithSecret(data: {
     throw new Error(`Invalid owner recovery authorization secret. ${attemptsLeft} attempt(s) remaining.`);
   }
 
-  // Clear rate limits on valid recovery secret
+  // Clear rate limits upon valid recovery secret
   clearRateLimit(rateLimitKey);
-
-  const db = readDatabase();
-  if (!db) {
-    throw new Error('Database service is unavailable.');
-  }
 
   const users: AdminUserRecord[] = Array.isArray(db.adminUsers) ? db.adminUsers : [];
   if (users.length === 0) {
@@ -821,25 +986,52 @@ export async function recoverSuperAdminWithSecret(data: {
   adminRecord.status = 'active';
   adminRecord.lastLogin = new Date().toISOString();
 
-  // Invalidate all existing administrator sessions across all devices
-  invalidateAllUserSessions(adminRecord.id);
+  // Invalidate ALL existing administrator sessions across all accounts and devices
+  revokeAllSessions();
+  clearRateLimit(rateLimitKey);
 
   // Permanently burn and disable this one-time recovery authorization
   isOwnerRecoveryBurned = true;
   try {
-    if (fs.existsSync(OWNER_RECOVERY_TOKEN_FILE)) {
-      fs.unlinkSync(OWNER_RECOVERY_TOKEN_FILE);
+    if (fs.existsSync(OWNER_RECOVERY_VAULT_FILE)) {
+      fs.unlinkSync(OWNER_RECOVERY_VAULT_FILE);
     }
   } catch (err) {
-    console.warn('[SafeNet Security] Could not remove token file after consumption:', err);
+    console.warn('[SafeNet Security] Could not remove vault file after consumption:', err);
   }
+  // Collect environment key hash and token file hash if configured so all mechanisms are permanently invalidated
+  const additionalInvalidated: string[] = [providedSecretHash, COMPROMISED_RECOVERY_KEY_HASH];
+  if (process.env.OWNER_RECOVERY_KEY) {
+    additionalInvalidated.push(crypto.createHash('sha256').update(process.env.OWNER_RECOVERY_KEY.trim()).digest('hex'));
+  }
+  try {
+    if (fs.existsSync(OWNER_RECOVERY_TOKEN_FILE)) {
+      const tokenContent = fs.readFileSync(OWNER_RECOVERY_TOKEN_FILE, 'utf-8').trim();
+      if (tokenContent) {
+        additionalInvalidated.push(crypto.createHash('sha256').update(tokenContent).digest('hex'));
+      }
+      fs.unlinkSync(OWNER_RECOVERY_TOKEN_FILE);
+    }
+  } catch {}
+
+  // Persistently record recovery disablement, clear stored hash, and blacklist secrets in database
+  const existingInvalidated = (db.securityState && db.securityState.invalidatedSecretHashes) || [];
+  db.securityState = {
+    ownerRecoveryDisabled: true,
+    ownerRecoveryDisabledAt: new Date().toISOString(),
+    ownerRecoveryDisabledReason: 'Owner recovery successfully executed and permanently disabled.',
+    recoverySecretHash: undefined,
+    recoverySecretSalt: undefined,
+    recoverySecretIterations: undefined,
+    invalidatedSecretHashes: Array.from(new Set([...existingInvalidated, ...additionalInvalidated]))
+  };
 
   // Record tamper-evident audit log
   appendTamperEvidentAuditLog(db, {
     user: `${adminRecord.name} (${adminRecord.email})`,
     action: 'OWNER_PRIVILEGE_RECOVERY',
     target: 'Super Administrator Account',
-    details: `Owner-level recovery successfully executed using one-time server authorization secret. Previous identity: ${previousName} (${previousEmail}). All previous sessions revoked. One-time recovery authorization permanently consumed and disabled.`,
+    details: `Owner-level recovery successfully executed using one-time server authorization secret. Previous identity: ${previousName} (${previousEmail}). All previous sessions revoked. One-time recovery authorization permanently consumed and disabled across all server restarts.`,
     ip: data.ip
   });
 

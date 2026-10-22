@@ -15,7 +15,6 @@ import {
   resetPasswordWithPassphrase,
   isOwnerRecoveryAvailable,
   recoverSuperAdminWithSecret,
-  getOrGenerateOwnerRecoverySecret,
   requireAdminAuth,
   sanitizeUser,
   setSessionCookies,
@@ -25,16 +24,100 @@ import {
   RECOMMENDED_ITERATIONS
 } from './src/server/auth.js';
 
+import cors from 'cors';
+import { 
+  checkDatabaseConnectivity, 
+  createLead, 
+  createSecurityAssessment, 
+  createJobApplication, 
+  recordAuditLog 
+} from './src/server/supabaseStore.js';
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = Number(process.env.PORT) || 3000;
+
+export function getClientIp(req: express.Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.ip || req.socket.remoteAddress || '127.0.0.1';
+}
+
+// ==========================================
+// CORS CONFIGURATION (Vercel Frontend + Render Backend)
+// ==========================================
+const allowedOrigins = [
+  'https://safenetsecurityltd.com',
+  'https://www.safenetsecurityltd.com',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(s => s.trim()) : []),
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) : [])
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow server-to-server or non-browser tools (curl, probes)
+    if (!origin) return callback(null, true);
+    // Allow approved origins or Cloud Run / preview environments
+    if (
+      allowedOrigins.includes(origin) || 
+      allowedOrigins.includes('*') ||
+      origin.endsWith('.run.app') ||
+      origin.endsWith('.vercel.app') ||
+      process.env.NODE_ENV !== 'production'
+    ) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS origin '${origin}' not permitted.`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'x-csrf-token', 'X-Admin-Token']
+}));
 
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
+
+// ==========================================
+// PRODUCTION HEALTH & READINESS PROBES (Render Service)
+// ==========================================
+
+// Lightweight liveness probe
+app.get('/api/health', (_req, res) => {
+  return res.status(200).json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Comprehensive readiness probe
+app.get('/api/health/ready', async (_req, res) => {
+  try {
+    const connectivity = await checkDatabaseConnectivity();
+    const isReady = connectivity.connected;
+    return res.status(isReady ? 200 : 503).json({
+      status: isReady ? 'ready' : 'unready',
+      provider: connectivity.provider,
+      latencyMs: connectivity.latencyMs,
+      details: connectivity.details,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err: any) {
+    return res.status(503).json({
+      status: 'unready',
+      error: err.message || 'Readiness probe failed'
+    });
+  }
+});
 
 // Initialize GenAI Client using process.env.GEMINI_API_KEY
 const apiKey = process.env.GEMINI_API_KEY || '';
@@ -304,12 +387,13 @@ app.post('/api/public/leads', (req, res) => {
         action: 'LEAD_SUBMITTED',
         target: 'Commercial Leads Vault',
         details: `Quote inquiry received for ${newLead.serviceRequired || 'Security Operations'} in ${newLead.location || 'Nigeria'}.`,
-        ip: req.ip || req.socket.remoteAddress || '127.0.0.1'
+        ip: getClientIp(req)
       });
       if (db.auditLogs.length > 200) db.auditLogs = db.auditLogs.slice(0, 200);
     }
 
     writeDatabase(db);
+    createLead(newLead).catch(err => console.warn('[Supabase Sync] Lead sync note:', err.message));
     return res.json({ success: true, lead: newLead });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -343,12 +427,13 @@ app.post('/api/public/assessments', (req, res) => {
         action: 'ASSESSMENT_COMPLETED',
         target: 'Tactical Threat Evaluations',
         details: `Facility evaluation generated: Vulnerability score ${newAssessment.calculatedScore}/100 (${newAssessment.riskRating}) for ${newAssessment.propertyType}.`,
-        ip: req.ip || req.socket.remoteAddress || '127.0.0.1'
+        ip: getClientIp(req)
       });
       if (db.auditLogs.length > 200) db.auditLogs = db.auditLogs.slice(0, 200);
     }
 
     writeDatabase(db);
+    createSecurityAssessment(newAssessment).catch(err => console.warn('[Supabase Sync] Assessment sync note:', err.message));
     return res.json({ success: true, assessment: newAssessment });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -383,12 +468,13 @@ app.post('/api/public/careers', (req, res) => {
         action: 'CANDIDATE_APPLICATION',
         target: 'Recruitment Dossier',
         details: `Application received for role: ${newApp.jobTitle || 'Security Guard'}.`,
-        ip: req.ip || req.socket.remoteAddress || '127.0.0.1'
+        ip: getClientIp(req)
       });
       if (db.auditLogs.length > 200) db.auditLogs = db.auditLogs.slice(0, 200);
     }
 
     writeDatabase(db);
+    createJobApplication(newApp).catch(err => console.warn('[Supabase Sync] Application sync note:', err.message));
     return res.json({ success: true, application: newApp });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -416,7 +502,7 @@ app.get('/api/admin/setup-status', (_req, res) => {
 app.post('/api/admin/setup-initial', async (req, res) => {
   try {
     const { name, email, password, recoveryPassphrase, setupKey } = req.body;
-    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    const ip = getClientIp(req);
     const result = await createInitialSuperAdmin({ name, email, password, recoveryPassphrase, setupKey, ip });
     
     // Establish HttpOnly, Secure, SameSite=Lax Session Cookie and CSRF token cookie
@@ -440,7 +526,7 @@ app.post('/api/admin/login', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password credentials are required.' });
     }
-    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    const ip = getClientIp(req);
     const userAgent = req.headers['user-agent'];
     const result = await loginAdministrator(email, password, ip, userAgent);
 
@@ -496,7 +582,7 @@ app.post('/api/admin/reset-password', async (req, res) => {
     if (!email || !recoveryPassphrase || !newPassword) {
       return res.status(400).json({ error: 'Email, recovery passphrase, and new password are required.' });
     }
-    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    const ip = getClientIp(req);
     await resetPasswordWithPassphrase(email, recoveryPassphrase, newPassword, ip);
     clearSessionCookies(res);
     return res.json({
@@ -528,7 +614,7 @@ app.post('/api/admin/owner-recovery', async (req, res) => {
       });
     }
 
-    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    const ip = getClientIp(req);
     const result = await recoverSuperAdminWithSecret({
       recoverySecret,
       newEmail,

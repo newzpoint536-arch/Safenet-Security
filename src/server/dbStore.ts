@@ -10,6 +10,16 @@ const DB_DIR = path.resolve(__dirname, '../../data');
 const DB_FILE = path.join(DB_DIR, 'database.json');
 const BACKUPS_DIR = path.join(DB_DIR, 'backups');
 
+export interface SecurityState {
+  ownerRecoveryDisabled: boolean;
+  ownerRecoveryDisabledAt?: string;
+  ownerRecoveryDisabledReason?: string;
+  recoverySecretHash?: string;
+  recoverySecretSalt?: string;
+  recoverySecretIterations?: number;
+  invalidatedSecretHashes?: string[];
+}
+
 export interface DatabaseSchema {
   leads: any[];
   securityAssessments: any[];
@@ -22,6 +32,7 @@ export interface DatabaseSchema {
   auditLogs: any[];
   siteSettings: any;
   adminUsers?: any[];
+  securityState?: SecurityState;
   updatedAt: string;
 }
 
@@ -176,6 +187,7 @@ function executeAtomicWrite(data: Partial<DatabaseSchema>): boolean {
       auditLogs: data.auditLogs || existing.auditLogs || [],
       siteSettings: normalizeDbSiteSettings(data.siteSettings !== undefined ? { ...existing.siteSettings, ...data.siteSettings } : existing.siteSettings),
       adminUsers: data.adminUsers !== undefined ? data.adminUsers : (existing.adminUsers || []),
+      securityState: data.securityState !== undefined ? data.securityState : (existing.securityState || { ownerRecoveryDisabled: false, invalidatedSecretHashes: [] }),
       updatedAt: new Date().toISOString()
     };
 

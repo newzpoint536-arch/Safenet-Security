@@ -8,25 +8,25 @@ export const StatsSection: React.FC = () => {
   const stats = [
     {
       label: 'Trained Security Officers',
-      value: siteSettings.stats.trainedGuards,
+      value: siteSettings?.stats?.trainedGuards || '500+',
       description: 'Vetted, disciplined Nigerian personnel operating to UK security standards',
       icon: Shield
     },
     {
       label: 'Emergency Response Readiness',
-      value: siteSettings.stats.responseTime,
+      value: siteSettings?.stats?.responseTime || '24/7',
       description: 'Central monitoring dispatch & staged mobile patrol squads',
       icon: Clock
     },
     {
       label: 'Active Perimeter Coverage',
-      value: siteSettings.stats.droneCctvCoverage,
+      value: siteSettings?.stats?.droneCctvCoverage || '100%',
       description: 'Continuous thermal drone reconnaissance and AI-driven CCTV systems',
       icon: Eye
     },
     {
       label: 'Client Retention Rate',
-      value: siteSettings.stats.clientRetention,
+      value: siteSettings?.stats?.clientRetention || '99.4%',
       description: 'Verifiable corporate, banking, residential & maritime trust',
       icon: Award
     }
