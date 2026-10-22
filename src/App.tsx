@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/layout/ErrorBoundary';
 
 import { HomePage } from './pages/HomePage';
 import { AboutPage } from './pages/AboutPage';
+import { LeadershipPage } from './pages/LeadershipPage';
 import { ServicesPage } from './pages/ServicesPage';
 import { ServiceDetailPage } from './pages/ServiceDetailPage';
 import { IndustriesPage } from './pages/IndustriesPage';
@@ -45,6 +46,11 @@ const RouterContent: React.FC = () => {
     // About
     if (cleanPath === '/about') {
       return <AboutPage />;
+    }
+
+    // Leadership & Our Team: /leadership or /our-team
+    if (cleanPath === '/leadership' || cleanPath === '/our-team' || cleanPath === '/team') {
+      return <LeadershipPage />;
     }
 
     // Services Catalog

@@ -187,16 +187,22 @@ export const AboutPage: React.FC = () => {
               Connect directly with our operations directorate for an in-depth security consultation.
             </p>
           </div>
-          <div className="flex gap-3 shrink-0">
+          <div className="flex flex-wrap gap-3 shrink-0">
+            <button
+              onClick={() => navigate('/leadership')}
+              className="px-4 py-2.5 text-xs font-semibold text-white bg-blue-900 hover:bg-blue-800 rounded-md border border-blue-700 transition-colors"
+            >
+              Meet Our Directorate
+            </button>
             <button
               onClick={() => navigate('/contact')}
-              className="px-4 py-2.5 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 rounded-md border border-slate-700"
+              className="px-4 py-2.5 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 rounded-md border border-slate-700 transition-colors"
             >
               Contact SafeNet
             </button>
             <button
               onClick={() => navigate('/request-quote')}
-              className="px-5 py-2.5 text-xs font-semibold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-md shadow-md"
+              className="px-5 py-2.5 text-xs font-semibold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-md shadow-md transition-colors"
             >
               Request a Quote
             </button>

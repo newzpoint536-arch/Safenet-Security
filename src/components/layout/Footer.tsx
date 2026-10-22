@@ -166,6 +166,11 @@ export const Footer: React.FC = () => {
                 </button>
               </li>
               <li>
+                <button onClick={() => navigate('/leadership')} className="hover:text-amber-400 transition-colors">
+                  Executive Directorate & Team
+                </button>
+              </li>
+              <li>
                 <button onClick={() => navigate('/projects')} className="hover:text-amber-400 transition-colors">
                   Projects & Case Studies
                 </button>

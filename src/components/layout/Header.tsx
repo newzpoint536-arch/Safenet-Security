@@ -334,6 +334,9 @@ export const Header: React.FC = () => {
                 <button onClick={() => handleNav('/about')} className="text-left w-full px-3 py-2 text-xs rounded hover:bg-slate-800 text-white hover:text-amber-400 transition-colors">
                   About SafeNet Security
                 </button>
+                <button onClick={() => handleNav('/leadership')} className="text-left w-full px-3 py-2 text-xs rounded hover:bg-slate-800 text-white hover:text-amber-400 transition-colors">
+                  Our Team & Leadership
+                </button>
                 <button onClick={() => handleNav('/about#why-choose-us')} className="text-left w-full px-3 py-2 text-xs rounded hover:bg-slate-800 text-white hover:text-amber-400 transition-colors">
                   Why Choose Us
                 </button>
@@ -528,6 +531,9 @@ export const Header: React.FC = () => {
             </button>
             <button onClick={() => handleNav('/about')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white">
               About SafeNet
+            </button>
+            <button onClick={() => handleNav('/leadership')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white">
+              Our Team & Leadership
             </button>
             <button onClick={() => handleNav('/projects')} className="text-left py-2 px-3 rounded hover:bg-slate-900 text-white">
               Projects & Case Studies

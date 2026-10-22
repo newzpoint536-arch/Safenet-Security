@@ -1,6 +1,19 @@
 {
   "leads": [
     {
+      "id": "lead-1792694678257-6879",
+      "createdAt": "2026-10-22T18:44:38.257Z",
+      "status": "new",
+      "notes": [],
+      "fullName": "Dr. Christopher Danjuma",
+      "company": "Atlantic Energy & Terminal Logistics",
+      "email": "c.danjuma@atlanticenergy.ng",
+      "phone": "+234 803 987 6543",
+      "location": "Victoria Island, Lagos",
+      "serviceRequired": "Offshore Maritime & Vessel Escort Security",
+      "urgency": "immediate"
+    },
+    {
       "id": "lead-1792683517479-1819",
       "createdAt": "2026-10-22T15:38:37.479Z",
       "status": "new",
@@ -1092,6 +1105,92 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "audit-1792694678258",
+      "timestamp": "2026-10-22T18:44:38.258Z",
+      "user": "Inquirer (Dr. Christopher Danjuma)",
+      "action": "LEAD_SUBMITTED",
+      "target": "Commercial Leads Vault",
+      "details": "Quote inquiry received for Offshore Maritime & Vessel Escort Security in Victoria Island, Lagos.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1792694678213-3410",
+      "timestamp": "2026-10-22T18:44:38.213Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "ADMIN_LOGIN_SUCCESS",
+      "target": "Operations Command Console",
+      "details": "Authenticated with role [super_admin]. Session established.",
+      "ip": "127.0.0.1",
+      "hash": "8944a18bcff8b2112c814fa319936e64cf36ea8eeec23977f770eaeb4bb8aacb",
+      "prevHash": "bb2a33cd2d42c77ad66ec3345d1093bc656a75471db324c11fccc552efdc0c88"
+    },
+    {
+      "id": "audit-1792694677995-2421",
+      "timestamp": "2026-10-22T18:44:37.995Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "LOGIN_FAILURE_BAD_PASSWORD",
+      "target": "Auth Gateway",
+      "details": "Incorrect password supplied. 4 attempts remaining before lockout.",
+      "ip": "127.0.0.1",
+      "hash": "bb2a33cd2d42c77ad66ec3345d1093bc656a75471db324c11fccc552efdc0c88",
+      "prevHash": "7075b0d41317dc6e18a81dab1077b1e364cef7ca81ffdf5f2cc452acad115463"
+    },
+    {
+      "id": "audit-1792694677733-4484",
+      "timestamp": "2026-10-22T18:44:37.733Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "ADMIN_LOGIN_SUCCESS",
+      "target": "Operations Command Console",
+      "details": "Authenticated with role [super_admin]. Session established.",
+      "ip": "127.0.0.1",
+      "hash": "7075b0d41317dc6e18a81dab1077b1e364cef7ca81ffdf5f2cc452acad115463",
+      "prevHash": "85c712b49127b8a4da051314ee81d42512c30de9384aae42e2f7e5b0ad5cc21a"
+    },
+    {
+      "id": "audit-1792694677551-6029",
+      "timestamp": "2026-10-22T18:44:37.551Z",
+      "user": "Unknown (intruder@safenetsecurityltd.com)",
+      "action": "OWNER_RECOVERY_COMPROMISED_SECRET_REJECTED",
+      "target": "Security Authorization Gateway",
+      "details": "Attempted use of permanently invalidated/compromised owner recovery secret. Request rejected.",
+      "ip": "10.0.0.8",
+      "hash": "85c712b49127b8a4da051314ee81d42512c30de9384aae42e2f7e5b0ad5cc21a",
+      "prevHash": "bdb1eeef8642c2a61f57a8901fa33c1b42cf0d92bcbeb29ce3225608bdb8c529"
+    },
+    {
+      "id": "audit-1792694677535-6469",
+      "timestamp": "2026-10-22T18:44:37.535Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "OWNER_PRIVILEGE_RECOVERY",
+      "target": "Super Administrator Account",
+      "details": "Owner-level recovery successfully executed using one-time server authorization secret. Previous identity: Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com). All previous sessions revoked. One-time recovery authorization permanently consumed and disabled across all server restarts.",
+      "ip": "10.0.0.5",
+      "hash": "bdb1eeef8642c2a61f57a8901fa33c1b42cf0d92bcbeb29ce3225608bdb8c529",
+      "prevHash": "6ba7908dab9ef222700511aec5d407b6467f9582ba4eb851c3c8b07d3ca98812"
+    },
+    {
+      "id": "audit-1792694677052-3815",
+      "timestamp": "2026-10-22T18:44:37.052Z",
+      "user": "Unknown (intruder@safenetsecurityltd.com)",
+      "action": "OWNER_RECOVERY_INVALID_SECRET",
+      "target": "Security Authorization Gateway",
+      "details": "Failed owner recovery attempt with invalid authorization secret. 2 attempts remaining.",
+      "ip": "10.0.0.2",
+      "hash": "6ba7908dab9ef222700511aec5d407b6467f9582ba4eb851c3c8b07d3ca98812",
+      "prevHash": "2aa85703357f88af5c4f1f9de981b0782aee705e9b0be4b243fc898b058a2f40"
+    },
+    {
+      "id": "audit-1792694676874-9670",
+      "timestamp": "2026-10-22T18:44:36.874Z",
+      "user": "Unknown (intruder@safenetsecurityltd.com)",
+      "action": "OWNER_RECOVERY_COMPROMISED_SECRET_REJECTED",
+      "target": "Security Authorization Gateway",
+      "details": "Attempted use of permanently invalidated/compromised owner recovery secret. Request rejected.",
+      "ip": "10.0.0.1",
+      "hash": "2aa85703357f88af5c4f1f9de981b0782aee705e9b0be4b243fc898b058a2f40",
+      "prevHash": "GENESIS-SAFENET-SECURE-ANCHOR-000"
+    },
     {
       "id": "audit-1792683517525",
       "timestamp": "2026-10-22T15:38:37.525Z",
@@ -2602,20 +2701,20 @@
       "name": "Capt. Emmanuel Adeleke (Rtd.)",
       "email": "director@safenetsecurityltd.com",
       "role": "super_admin",
-      "salt": "ee3f790260f4edebfa7b27e023a74c3588e428f2280dbfe30105ff29613ca75f",
-      "hash": "9bc49db66e8ce83fb9e2a6e6366ce8a4ad523f378e5cfd4ac67024d96dc7b441108566f5ca06001a3bf4f2314522fa39c821386a8be8c8a32a977a4b946f5de8",
+      "salt": "e90a4c600a4a04502fd8fe17d76267dad4f677d73df8d7a960b258acf3553e31",
+      "hash": "346ff873f1b9486228400be7c0666d812f19edccc4b57267d525be52295b5402af53c52ebe2552a5eb48ba698d9fd460d1a6e97d6396a1fa1ef73f6ddd4ef343",
       "iterations": 210000,
-      "recoveryPassphraseHash": "70b9c193474defe62b343c78f12319fa0d7088d90ce0b4c94aedc6f0eb191e5f26f85f4da11493819184994cd622d8969d6af5a4b32ff84bfd3c4c16f5fac4b0",
-      "recoveryPassphraseSalt": "db59aeef233a016b02aef3b3d8f2fef8a06f47b6b0401cf55c8b9fca2b22ca4a",
+      "recoveryPassphraseHash": "03efc251083d398e897b3508c7b0b497bd5faf630fc5992f86dc264fd25232682d01515763d32def45010cc89f6d7af4da3663f42e06546c07642b0cd209f9a2",
+      "recoveryPassphraseSalt": "930a279d177c9a408135f2bc788e9182a05c7c9bd4f23d5bb51fc3c803ffa3e5",
       "recoveryPassphraseIterations": 210000,
       "createdAt": "2026-10-17T18:23:43.636Z",
-      "lastLogin": "2026-10-22T15:38:37.444Z",
+      "lastLogin": "2026-10-22T18:44:38.213Z",
       "status": "active"
     }
   ],
   "securityState": {
     "ownerRecoveryDisabled": true,
-    "ownerRecoveryDisabledAt": "2026-10-22T15:38:36.735Z",
+    "ownerRecoveryDisabledAt": "2026-10-22T18:44:37.535Z",
     "ownerRecoveryDisabledReason": "Owner recovery successfully executed and permanently disabled.",
     "invalidatedSecretHashes": [
       "e76c0fa479a69a997bf2471eda535fc217ab94c5166432b5b25344440b0acdbc",
@@ -2641,8 +2740,10 @@
       "ffb95393871af74b024509bd2d05957f6d9515e8f6ca7abc4386b8d67d75c8d4",
       "2fe1c0207eac08696717d3c8474899180c77b36539db8fdd8fd438dbaf80d44d",
       "702219a24d0b05ab7231a9e129f4719fc6af4510e3d6e60c20f7b96febdfdffa",
-      "97e3ac01c5db49edddc359a5bf979d3eaad92923d81a9c4f3e9036845c1c7261"
+      "97e3ac01c5db49edddc359a5bf979d3eaad92923d81a9c4f3e9036845c1c7261",
+      "50cadc6d3f8bd3a446784ef75bc3e2a3ac0e8fd79ed43a196b09942eb8b049b1",
+      "ffb45c3f0703cff0acecdd3fde9dd24dfc238af6a387d04f27d495faa23ac888"
     ]
   },
-  "updatedAt": "2026-10-22T15:38:37.536Z"
+  "updatedAt": "2026-10-22T18:44:38.269Z"
 }

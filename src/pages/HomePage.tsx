@@ -4,6 +4,7 @@ import { StatsSection } from '../components/home/StatsSection';
 import { ServicesMatrix } from '../components/home/ServicesMatrix';
 import { OperationalProcess } from '../components/home/OperationalProcess';
 import { WhyChooseUs } from '../components/home/WhyChooseUs';
+import { LeadershipSection } from '../components/team/LeadershipSection';
 import { InteractiveAssessmentTeaser } from '../components/home/InteractiveAssessmentTeaser';
 import { AiSentinelSection } from '../components/home/AiSentinelSection';
 import { TestimonialsSection } from '../components/home/TestimonialsSection';
@@ -17,6 +18,7 @@ export const HomePage: React.FC = () => {
       <ServicesMatrix />
       <OperationalProcess />
       <WhyChooseUs />
+      <LeadershipSection isHomePage={true} showHeaderCta={true} />
       <AiSentinelSection />
       <InteractiveAssessmentTeaser />
       <TestimonialsSection />
