@@ -99,25 +99,9 @@ export const CinematicHeroSlider: React.FC = () => {
               style={{ backgroundImage: `url(${slide.image})` }}
             />
 
-            {/* Measured Scrim & Gradient Overlays for WCAG AA readability */}
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/45 via-slate-950/40 to-slate-950/20" />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/50" />
-            
-            {/* Subtle Security Grid Pattern */}
-            <div className="absolute inset-0 bg-security-grid opacity-30 pointer-events-none" />
           </div>
         );
       })}
-
-      {/* Decorative Radar Corner Element (Quiet HUD styling) */}
-      <div className="hidden xl:block absolute top-8 right-8 z-20 pointer-events-none opacity-40">
-        <div className="relative w-28 h-28 rounded-full border border-amber-500/30 p-2">
-          <div className="w-full h-full rounded-full border border-dashed border-amber-500/20 flex items-center justify-center">
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></div>
-          </div>
-          <div className="absolute inset-0 rounded-full radar-sweep pointer-events-none"></div>
-        </div>
-      </div>
 
       {/* Hero Foreground Content */}
       <div className="relative z-20 max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex flex-col justify-between py-12 lg:py-16">
@@ -137,15 +121,15 @@ export const CinematicHeroSlider: React.FC = () => {
         {/* Main Heading and CTA Area */}
         <div className="max-w-3xl space-y-6">
           <div className="space-y-3">
-            <p className="text-xs uppercase tracking-widest font-bold text-amber-400/90">
+            <p className="text-xs uppercase tracking-widest font-bold text-amber-400 drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
               {currentSlide.eyebrow}
             </p>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold text-white tracking-tight leading-[1.15] text-balance">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-extrabold text-white tracking-tight leading-[1.15] text-balance drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
               {currentSlide.headline}
             </h1>
           </div>
 
-          <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl font-normal">
+          <p className="text-sm sm:text-base text-slate-100 leading-relaxed max-w-2xl font-normal drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)]">
             {currentSlide.description}
           </p>
 

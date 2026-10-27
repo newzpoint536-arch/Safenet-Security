@@ -1,6 +1,32 @@
 {
   "leads": [
     {
+      "id": "lead-1793107868806-7703",
+      "createdAt": "2026-10-27T13:31:08.806Z",
+      "status": "new",
+      "notes": [],
+      "fullName": "Dr. Christopher Danjuma",
+      "company": "Atlantic Energy & Terminal Logistics",
+      "email": "c.danjuma@atlanticenergy.ng",
+      "phone": "+234 803 987 6543",
+      "location": "Victoria Island, Lagos",
+      "serviceRequired": "Offshore Maritime & Vessel Escort Security",
+      "urgency": "immediate"
+    },
+    {
+      "id": "lead-1793107868806-7703",
+      "createdAt": "2026-10-27T13:31:08.806Z",
+      "status": "new",
+      "notes": [],
+      "fullName": "Dr. Christopher Danjuma",
+      "company": "Atlantic Energy & Terminal Logistics",
+      "email": "c.danjuma@atlanticenergy.ng",
+      "phone": "+234 803 987 6543",
+      "location": "Victoria Island, Lagos",
+      "serviceRequired": "Offshore Maritime & Vessel Escort Security",
+      "urgency": "immediate"
+    },
+    {
       "id": "lead-1793100467585-7808",
       "createdAt": "2026-10-27T11:27:47.585Z",
       "status": "new",
@@ -410,6 +436,38 @@
     }
   ],
   "securityAssessments": [
+    {
+      "id": "assess-1793107868835-8735",
+      "createdAt": "2026-10-27T13:31:08.835Z",
+      "clientName": "Engr. Emeka Okonkwo",
+      "clientEmail": "e.okonkwo@transcorp.ng",
+      "clientPhone": "+234 812 345 6789",
+      "facilityType": "Industrial Plant & Tank Farm",
+      "location": "Port Harcourt, Rivers State",
+      "calculatedScore": 78,
+      "riskRating": "High Priority Vulnerability",
+      "recommendedLayers": [
+        "Perimeter Thermal CCTV",
+        "Drone Patrols",
+        "Manned Tactical Operatives"
+      ]
+    },
+    {
+      "id": "assess-1793107868835-8735",
+      "createdAt": "2026-10-27T13:31:08.835Z",
+      "clientName": "Engr. Emeka Okonkwo",
+      "clientEmail": "e.okonkwo@transcorp.ng",
+      "clientPhone": "+234 812 345 6789",
+      "facilityType": "Industrial Plant & Tank Farm",
+      "location": "Port Harcourt, Rivers State",
+      "calculatedScore": 78,
+      "riskRating": "High Priority Vulnerability",
+      "recommendedLayers": [
+        "Perimeter Thermal CCTV",
+        "Drone Patrols",
+        "Manned Tactical Operatives"
+      ]
+    },
     {
       "id": "assess-1793100467604-5671",
       "createdAt": "2026-10-27T11:27:47.604Z",
@@ -1034,6 +1092,28 @@
   ],
   "jobApplications": [
     {
+      "id": "app-1793107868869-5046",
+      "submittedAt": "2026-10-27T13:31:08.869Z",
+      "status": "pending",
+      "applicantName": "Sergeant Samuel Bamidele (Rtd.)",
+      "applicantEmail": "s.bamidele@gmail.com",
+      "applicantPhone": "+234 805 123 4567",
+      "jobTitle": "Tactical Mobile Patrol Commander",
+      "experienceYears": "8 years military/police background",
+      "nsdcStatus": "Certified"
+    },
+    {
+      "id": "app-1793107868869-5046",
+      "submittedAt": "2026-10-27T13:31:08.869Z",
+      "status": "pending",
+      "applicantName": "Sergeant Samuel Bamidele (Rtd.)",
+      "applicantEmail": "s.bamidele@gmail.com",
+      "applicantPhone": "+234 805 123 4567",
+      "jobTitle": "Tactical Mobile Patrol Commander",
+      "experienceYears": "8 years military/police background",
+      "nsdcStatus": "Certified"
+    },
+    {
       "id": "app-1793100467623-7931",
       "submittedAt": "2026-10-27T11:27:47.623Z",
       "status": "pending",
@@ -1332,6 +1412,110 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "audit-1793107868869",
+      "timestamp": "2026-10-27T13:31:08.869Z",
+      "user": "Candidate (Sergeant Samuel Bamidele (Rtd.))",
+      "action": "CANDIDATE_APPLICATION",
+      "target": "Recruitment Dossier",
+      "details": "Application received for role: Tactical Mobile Patrol Commander.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1793107868836",
+      "timestamp": "2026-10-27T13:31:08.836Z",
+      "user": "Client (Engr. Emeka Okonkwo)",
+      "action": "ASSESSMENT_COMPLETED",
+      "target": "Tactical Threat Evaluations",
+      "details": "Facility evaluation generated: Vulnerability score 78/100 (High Priority Vulnerability) for undefined.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1793107868806",
+      "timestamp": "2026-10-27T13:31:08.806Z",
+      "user": "Inquirer (Dr. Christopher Danjuma)",
+      "action": "LEAD_SUBMITTED",
+      "target": "Commercial Leads Vault",
+      "details": "Quote inquiry received for Offshore Maritime & Vessel Escort Security in Victoria Island, Lagos.",
+      "ip": "127.0.0.1"
+    },
+    {
+      "id": "audit-1793107868742-7197",
+      "timestamp": "2026-10-27T13:31:08.742Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "ADMIN_LOGIN_SUCCESS",
+      "target": "Operations Command Console",
+      "details": "Authenticated with role [super_admin]. Session established.",
+      "ip": "127.0.0.1",
+      "hash": "5b0d542d2700fb377aceb9faec7a502c50b36eb635fc9530580cf1df4a80d740",
+      "prevHash": "f2919c083d76d40a03a398355a815be70edb890175312a8246034f5ddc57a91e"
+    },
+    {
+      "id": "audit-1793107868486-1220",
+      "timestamp": "2026-10-27T13:31:08.486Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "LOGIN_FAILURE_BAD_PASSWORD",
+      "target": "Auth Gateway",
+      "details": "Incorrect password supplied. 4 attempts remaining before lockout.",
+      "ip": "127.0.0.1",
+      "hash": "f2919c083d76d40a03a398355a815be70edb890175312a8246034f5ddc57a91e",
+      "prevHash": "2a9dafb4bb311bfbdacfbc42cb6f207e5157419f89d3f327317450482bbcfe0c"
+    },
+    {
+      "id": "audit-1793107868230-4515",
+      "timestamp": "2026-10-27T13:31:08.230Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "ADMIN_LOGIN_SUCCESS",
+      "target": "Operations Command Console",
+      "details": "Authenticated with role [super_admin]. Session established.",
+      "ip": "127.0.0.1",
+      "hash": "2a9dafb4bb311bfbdacfbc42cb6f207e5157419f89d3f327317450482bbcfe0c",
+      "prevHash": "d32bf44b087baa09b869ef9fbcb51ce3831e9e1052b2eb961b97e3c00fbe5912"
+    },
+    {
+      "id": "audit-1793107868051-1811",
+      "timestamp": "2026-10-27T13:31:08.051Z",
+      "user": "Unknown (intruder@safenetsecurityltd.com)",
+      "action": "OWNER_RECOVERY_COMPROMISED_SECRET_REJECTED",
+      "target": "Security Authorization Gateway",
+      "details": "Attempted use of permanently invalidated/compromised owner recovery secret. Request rejected.",
+      "ip": "10.0.0.8",
+      "hash": "d32bf44b087baa09b869ef9fbcb51ce3831e9e1052b2eb961b97e3c00fbe5912",
+      "prevHash": "4e4c47ba9bbbbea13e93e14b38d1ed097283d7c00bf5b09d162f31d423ed54a7"
+    },
+    {
+      "id": "audit-1793107868027-3893",
+      "timestamp": "2026-10-27T13:31:08.027Z",
+      "user": "Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com)",
+      "action": "OWNER_PRIVILEGE_RECOVERY",
+      "target": "Super Administrator Account",
+      "details": "Owner-level recovery successfully executed using one-time server authorization secret. Previous identity: Capt. Emmanuel Adeleke (Rtd.) (director@safenetsecurityltd.com). All previous sessions revoked. One-time recovery authorization permanently consumed and disabled across all server restarts.",
+      "ip": "10.0.0.5",
+      "hash": "4e4c47ba9bbbbea13e93e14b38d1ed097283d7c00bf5b09d162f31d423ed54a7",
+      "prevHash": "f91f5c4f3e9c9304bde0b1133240f9a85bf7cb804fff6bf2077e01d23d62ec82"
+    },
+    {
+      "id": "audit-1793107867508-9424",
+      "timestamp": "2026-10-27T13:31:07.508Z",
+      "user": "Unknown (intruder@safenetsecurityltd.com)",
+      "action": "OWNER_RECOVERY_INVALID_SECRET",
+      "target": "Security Authorization Gateway",
+      "details": "Failed owner recovery attempt with invalid authorization secret. 2 attempts remaining.",
+      "ip": "10.0.0.2",
+      "hash": "f91f5c4f3e9c9304bde0b1133240f9a85bf7cb804fff6bf2077e01d23d62ec82",
+      "prevHash": "8a91b9f2ee72fd37681ee05e99e7fa31eaf3e497caa8272215f6aa3bed478f22"
+    },
+    {
+      "id": "audit-1793107867326-2733",
+      "timestamp": "2026-10-27T13:31:07.326Z",
+      "user": "Unknown (intruder@safenetsecurityltd.com)",
+      "action": "OWNER_RECOVERY_COMPROMISED_SECRET_REJECTED",
+      "target": "Security Authorization Gateway",
+      "details": "Attempted use of permanently invalidated/compromised owner recovery secret. Request rejected.",
+      "ip": "10.0.0.1",
+      "hash": "8a91b9f2ee72fd37681ee05e99e7fa31eaf3e497caa8272215f6aa3bed478f22",
+      "prevHash": "GENESIS-SAFENET-SECURE-ANCHOR-000"
+    },
     {
       "id": "audit-1793100467623",
       "timestamp": "2026-10-27T11:27:47.623Z",
@@ -3154,21 +3338,21 @@
       "name": "Capt. Emmanuel Adeleke (Rtd.)",
       "email": "director@safenetsecurityltd.com",
       "role": "super_admin",
-      "salt": "54598abd7296ff660dfdd800d5fe4bf6ae89b218583966ab898a92e644277d54",
-      "hash": "127a5c2874324480a3cbabdba03069ca8205deb907ca76548aa2e295be2d3fef7e81ba2204a2930cfa3fe893ca6ee4adfe067b284da36c287c635e3b25573acb",
+      "salt": "2530cc8f3f465a0887024ae180b942b99b084bc273c78502b180d5b42a8edec4",
+      "hash": "2f7e29cfca1d9f9c0dd2addf8c262a6677f30bd8ec41ebf7eb8d181539f5338bf5d7ca1d1f55f4af056a63334dd1e0db7dae49c15bbcdba2ffd9a0a0b5a5441c",
       "iterations": 210000,
-      "recoveryPassphraseHash": "8c0bbdcfa3e8a8d0b8b38be0505415e29dad152e23dec5b92597bc447f139ffb67be615a04063053149be0921626f40f8a9a6e96a5dbaba6bb77f75319c91cc9",
-      "recoveryPassphraseSalt": "11d73939fa001cb0e11f938a952bd8a6901f1681468333736c2f70448419c7ca",
+      "recoveryPassphraseHash": "a7c9b3fb5211536e835e69f86062143b8094586d8bbb4227cd9cc9da715ee399c2c6b6958ffc004ea690288933083c84acf77baf6cbe13d3cc59a477f9e1087b",
+      "recoveryPassphraseSalt": "f479db09212a5769a57932e0b5a02ec068dc90b5238719d302af92be8afa1970",
       "recoveryPassphraseIterations": 210000,
       "createdAt": "2026-10-17T18:23:43.636Z",
-      "lastLogin": "2026-10-27T11:27:47.516Z",
+      "lastLogin": "2026-10-27T13:31:08.742Z",
       "status": "active"
     }
   ],
   "securityState": {
     "ownerRecoveryDisabled": false,
-    "recoverySecretHash": "0c8c7abb09f4a8d3d99187955566589a92508ddce67cd3ba80a27b1522f7192210d6681b331ecde003bda1625d1e03b4f3d7738a2d62881515df37a25987436f",
-    "recoverySecretSalt": "f269449ad15b3f9f622ef638944106ec87e08ba6cbcc75f4a752d1be0b09e05f",
+    "recoverySecretHash": "06d27de360bcb3bee20ad3e3c5c962ec73c1eb383b47ac2b6826c7643e69edb8cf1e07ae9ad8728c5f472efaea656e57692afcf941b1f4e6a2d12dd3d3e9ef4d",
+    "recoverySecretSalt": "333245d37e85dc5433f43d33ddfbbf3430481a1937a41e28365e1a1224376379",
     "recoverySecretIterations": 210000,
     "invalidatedSecretHashes": [
       "e76c0fa479a69a997bf2471eda535fc217ab94c5166432b5b25344440b0acdbc",
@@ -3200,8 +3384,10 @@
       "3d4276e189c88adb6ea5fded4cf4b7ac705181201594b5c6fe2a99d24f7748ff",
       "d65f0a7dd9971800814d6daa4c1b23601992d0892bef5e3df547a1a007d513b1",
       "14fa0c1777885894bab25d2fd841038af99a9f9795a7e7f9ab9594859b7e48f4",
-      "859596e27c3870e16d16eb753bec767c37a7eef8ccac08aafaa9b40790f424e1"
+      "859596e27c3870e16d16eb753bec767c37a7eef8ccac08aafaa9b40790f424e1",
+      "af9023b3aa6478ce1129836f128119d7382a7ec97a1bca150bfd768da939355c",
+      "3aea20e51dd91e38d31ef496a8414765f8688c952d7ec39b3907dc18c1a0bd16"
     ]
   },
-  "updatedAt": "2026-10-27T11:28:07.504Z"
+  "updatedAt": "2026-10-27T13:31:28.151Z"
 }
