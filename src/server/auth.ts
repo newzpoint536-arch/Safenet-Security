@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Request, Response, NextFunction } from 'express';
 import { readDatabase, writeDatabase } from './dbStore.js';
+import { saveOwnerRecoveryState, getOwnerRecoveryState } from './supabaseStore.js';
 import type { AdminRole, AuditLog } from '../types/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -30,8 +31,39 @@ const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 const MAX_RECOVERY_ATTEMPTS = 3;
 const RECOVERY_LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes
 
-// Internal secret for HMAC-SHA256 audit chaining
-const AUDIT_HMAC_SECRET = process.env.AUDIT_HMAC_SECRET || 'safenet-audit-integrity-chain-key-v1';
+// ==========================================
+// AUDIT LEDGER HMAC SECRET RESOLUTION
+// ==========================================
+// HISTORICAL TRANSITION & KEY COMPROMISE DOCUMENTATION:
+// The legacy key 'safenet-audit-integrity-chain-key-v1' is COMPROMISED and PERMANENTLY REVOKED.
+// It must NEVER be used to sign any new audit entries.
+// All historical audit records and hashes are preserved verbatim in data/database.json
+// to ensure unbroken historical chain continuity and zero data loss.
+// For all new audit-signing operations:
+// - Production (NODE_ENV === 'production'): AUDIT_HMAC_SECRET is strictly required and must be >= 32 characters.
+//   Any attempt to run without it throws a fatal error (fail closed).
+// - Development: No silent fallback to the compromised secret is permitted. If unset,
+//   audit operations operate with an explicit 'DEV-UNSIGNED' indicator.
+export function getAuditHmacSecret(): string | null {
+  const secret = process.env.AUDIT_HMAC_SECRET?.trim() || '';
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (isProduction) {
+    if (!secret || secret.length < 32) {
+      throw new Error(
+        '[FATAL SECURITY CONFIGURATION] Missing or insufficient AUDIT_HMAC_SECRET in production. ' +
+        'A fresh cryptographically secure secret (minimum 32 characters / 256 bits) must be configured.'
+      );
+    }
+    return secret;
+  }
+
+  // Non-production / development
+  if (!secret || secret.length < 32) {
+    return null;
+  }
+  return secret;
+}
 
 export interface AdminUserRecord {
   id: string;
@@ -213,7 +245,14 @@ export function appendTamperEvidentAuditLog(
   const id = `audit-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
   const logPayload = `${prevHash}:${id}:${timestamp}:${entry.user}:${entry.action}:${entry.target}:${entry.details}:${entry.ip}`;
-  const hash = crypto.createHmac('sha256', AUDIT_HMAC_SECRET).update(logPayload).digest('hex');
+  const hmacSecret = getAuditHmacSecret();
+  let hash: string;
+  if (hmacSecret) {
+    hash = crypto.createHmac('sha256', hmacSecret).update(logPayload).digest('hex');
+  } else {
+    // Development mode without secret: explicitly mark as dev unsigned, never use compromised key
+    hash = `DEV-UNSIGNED-${crypto.createHash('sha256').update(logPayload).digest('hex').substring(0, 16)}`;
+  }
 
   const newLog: AuditLog = {
     id,
@@ -801,6 +840,16 @@ export function isOwnerRecoveryAvailable(): boolean {
   return false;
 }
 
+export async function isOwnerRecoveryAvailableAsync(): Promise<boolean> {
+  try {
+    const persistentState = await getOwnerRecoveryState();
+    if (persistentState && persistentState.ownerRecoveryDisabled === true) {
+      return false;
+    }
+  } catch {}
+  return isOwnerRecoveryAvailable();
+}
+
 export async function recoverSuperAdminWithSecret(data: {
   recoverySecret: string;
   newEmail: string;
@@ -814,9 +863,11 @@ export async function recoverSuperAdminWithSecret(data: {
     throw new Error('Database service is unavailable.');
   }
 
+  const persistentSecState = await getOwnerRecoveryState().catch(() => null);
   const invalidatedHashes = new Set<string>([
     COMPROMISED_RECOVERY_KEY_HASH,
-    ...((db.securityState && db.securityState.invalidatedSecretHashes) || [])
+    ...((db.securityState && db.securityState.invalidatedSecretHashes) || []),
+    ...((persistentSecState && persistentSecState.invalidatedSecretHashes) || [])
   ]);
 
   const rawSecret = data.recoverySecret.trim();
@@ -839,6 +890,7 @@ export async function recoverSuperAdminWithSecret(data: {
 
   // 2. Check persistent disablement across restarts and deployments
   const isPersistentlyDisabled = (db.securityState && db.securityState.ownerRecoveryDisabled === true) || 
+    (persistentSecState && persistentSecState.ownerRecoveryDisabled === true) ||
     (isOwnerRecoveryBurned && (!db.securityState || db.securityState.ownerRecoveryDisabled !== false || !db.securityState.recoverySecretHash));
 
   if (isPersistentlyDisabled) {
@@ -1036,6 +1088,11 @@ export async function recoverSuperAdminWithSecret(data: {
   });
 
   writeDatabase(db);
+  try {
+    await saveOwnerRecoveryState(db.securityState);
+  } catch (syncErr) {
+    console.warn('[SafeNet Security] Persistent owner_recovery_state sync notice:', syncErr);
+  }
 
   // Create fresh authenticated session for owner
   const session = createSession(adminRecord, data.ip, 'cookie');

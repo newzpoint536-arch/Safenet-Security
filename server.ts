@@ -14,6 +14,7 @@ import {
   logoutSession,
   resetPasswordWithPassphrase,
   isOwnerRecoveryAvailable,
+  isOwnerRecoveryAvailableAsync,
   recoverSuperAdminWithSecret,
   requireAdminAuth,
   sanitizeUser,
@@ -34,6 +35,40 @@ import {
 } from './src/server/supabaseStore.js';
 
 dotenv.config();
+
+// ==========================================
+// STARTUP SECURITY VALIDATION
+// ==========================================
+// HISTORICAL TRANSITION NOTICE:
+// The initial key 'safenet-audit-integrity-chain-key-v1' is COMPROMISED and PERMANENTLY REVOKED.
+// No fallback to any hardcoded key is permitted in any environment.
+// Production requires a fresh cryptographically random secret of at least 32 characters (256 bits).
+function validateStartupSecurity(): void {
+  const hmacSecret = process.env.AUDIT_HMAC_SECRET?.trim();
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (!hmacSecret || hmacSecret.length < 32) {
+    if (isProduction) {
+      console.error(
+        '\n================================================================================\n' +
+        '❌ [FATAL SECURITY MISCONFIGURATION] AUDIT_HMAC_SECRET IS MISSING OR INSUFFICIENT.\n' +
+        '   Production requires a fresh cryptographically random secret of at least 32 characters\n' +
+        '   (256 bits) set via the AUDIT_HMAC_SECRET environment variable.\n' +
+        '   The historical key was compromised and permanently revoked.\n' +
+        '   The backend refuses to start insecurely.\n' +
+        '================================================================================\n'
+      );
+      process.exit(1);
+    } else {
+      console.warn(
+        '⚠️ [DEV AUDIT WARNING] AUDIT_HMAC_SECRET is unset or shorter than 32 chars in development.\n' +
+        '   The historical fallback key is permanently revoked and will not be applied.\n' +
+        '   Audit logs in dev will be recorded in explicit dev-unsigned mode until an environment secret is provided.'
+      );
+    }
+  }
+}
+validateStartupSecurity();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -595,9 +630,9 @@ app.post('/api/admin/reset-password', async (req, res) => {
 });
 
 // Check whether one-time owner recovery is available (Returns boolean only, never the secret)
-app.get('/api/admin/owner-recovery-status', (_req, res) => {
+app.get('/api/admin/owner-recovery-status', async (_req, res) => {
   try {
-    const isAvailable = isOwnerRecoveryAvailable();
+    const isAvailable = await isOwnerRecoveryAvailableAsync();
     return res.json({ isAvailable });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });

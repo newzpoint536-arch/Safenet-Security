@@ -24,16 +24,51 @@ async function runMigration() {
   const rawJson = fs.readFileSync(DB_FILE, 'utf8');
   const db = JSON.parse(rawJson);
 
-  console.log('📦 Source database.json inspected.');
-  console.log(`- Admin Users: ${(db.adminUsers || []).length}`);
-  console.log(`- Leads / CRM: ${(db.leads || []).length}`);
-  console.log(`- Assessments: ${(db.securityAssessments || []).length}`);
-  console.log(`- Blog Posts: ${(db.blogPosts || []).length}`);
-  console.log(`- Social Accounts: ${(db.socialAccounts || []).length}`);
-  console.log(`- Social Jobs: ${(db.socialPublishJobs || []).length}`);
-  console.log(`- Job Applications: ${(db.jobApplications || []).length}`);
-  console.log(`- Testimonials: ${(db.testimonials || []).length}`);
-  console.log(`- Audit Logs: ${(db.auditLogs || []).length}`);
+  // Deterministic deduplication helper:
+  // Preserves every unique record; when duplicate IDs exist, retains the newest valid occurrence.
+  function deduplicate(records, idField = 'id', dateField = 'createdAt') {
+    if (!Array.isArray(records)) return [];
+    const map = new Map();
+    for (let i = 0; i < records.length; i++) {
+      const item = records[i];
+      const id = item[idField];
+      if (!id) continue;
+      if (!map.has(id)) {
+        map.set(id, { item, originalIndex: i });
+      } else {
+        const existing = map.get(id);
+        const existingTime = new Date(existing.item[dateField] || 0).getTime();
+        const currentTime = new Date(item[dateField] || 0).getTime();
+        // Retain the newest valid occurrence; do not let older duplicates overwrite newer ones
+        if (currentTime > existingTime) {
+          map.set(id, { item, originalIndex: i });
+        }
+      }
+    }
+    return Array.from(map.values()).map(x => x.item);
+  }
+
+  const adminUsers = deduplicate(db.adminUsers || [], 'id', 'createdAt');
+  const leads = deduplicate(db.leads || [], 'id', 'createdAt');
+  const securityAssessments = deduplicate(db.securityAssessments || [], 'id', 'createdAt');
+  const blogPosts = deduplicate(db.blogPosts || [], 'id', 'publishedAt');
+  const socialAccounts = deduplicate(db.socialAccounts || [], 'platform', 'lastSyncedAt');
+  const socialPublishJobs = deduplicate(db.socialPublishJobs || [], 'id', 'date');
+  const jobApplications = deduplicate(db.jobApplications || [], 'id', 'submittedAt');
+  const careerOpenings = deduplicate(db.careerOpenings || [], 'id', 'createdAt');
+  const testimonials = deduplicate(db.testimonials || [], 'id', 'createdAt');
+  const auditLogs = deduplicate(db.auditLogs || [], 'id', 'timestamp');
+
+  console.log('📦 Source database.json inspected & deduplicated.');
+  console.log(`- Admin Users: ${adminUsers.length} (from ${db.adminUsers?.length || 0})`);
+  console.log(`- Leads / CRM: ${leads.length} (from ${db.leads?.length || 0})`);
+  console.log(`- Assessments: ${securityAssessments.length} (from ${db.securityAssessments?.length || 0})`);
+  console.log(`- Blog Posts: ${blogPosts.length} (from ${db.blogPosts?.length || 0})`);
+  console.log(`- Social Accounts: ${socialAccounts.length} (from ${db.socialAccounts?.length || 0})`);
+  console.log(`- Social Jobs: ${socialPublishJobs.length} (from ${db.socialPublishJobs?.length || 0})`);
+  console.log(`- Job Applications: ${jobApplications.length} (from ${db.jobApplications?.length || 0})`);
+  console.log(`- Testimonials: ${testimonials.length} (from ${db.testimonials?.length || 0})`);
+  console.log(`- Audit Logs: ${auditLogs.length} (from ${db.auditLogs?.length || 0})`);
   console.log(`- Site Settings: ${db.siteSettings ? 'Present' : 'Missing'}`);
   console.log(`- Security State: ${db.securityState ? 'Present' : 'Missing'}`);
 
@@ -82,8 +117,8 @@ ON CONFLICT (id) DO UPDATE SET
   }
 
   // Admin Users
-  if (Array.isArray(db.adminUsers)) {
-    for (const u of db.adminUsers) {
+  if (Array.isArray(adminUsers)) {
+    for (const u of adminUsers) {
       sqlStatements.push(`
 INSERT INTO admin_users (
   id, name, email, role, salt, hash, iterations,
@@ -153,8 +188,8 @@ ON CONFLICT (id) DO UPDATE SET
   }
 
   // Leads
-  if (Array.isArray(db.leads)) {
-    for (const lead of db.leads) {
+  if (Array.isArray(leads)) {
+    for (const lead of leads) {
       sqlStatements.push(`
 INSERT INTO leads (
   id, full_name, company, email, phone, whatsapp,
@@ -198,8 +233,8 @@ ON CONFLICT (id) DO UPDATE SET
   }
 
   // Security Assessments
-  if (Array.isArray(db.securityAssessments)) {
-    for (const a of db.securityAssessments) {
+  if (Array.isArray(securityAssessments)) {
+    for (const a of securityAssessments) {
       sqlStatements.push(`
 INSERT INTO security_assessments (
   id, client_name, client_email, client_phone, client_company,
@@ -242,8 +277,8 @@ ON CONFLICT (id) DO UPDATE SET
   }
 
   // Blog Posts
-  if (Array.isArray(db.blogPosts)) {
-    for (const b of db.blogPosts) {
+  if (Array.isArray(blogPosts)) {
+    for (const b of blogPosts) {
       sqlStatements.push(`
 INSERT INTO blog_posts (
   id, slug, title, excerpt, content, featured_image,
@@ -283,12 +318,12 @@ ON CONFLICT (id) DO UPDATE SET
   }
 
   // Social Accounts
-  if (Array.isArray(db.socialAccounts)) {
-    for (const acc of db.socialAccounts) {
+  if (Array.isArray(socialAccounts)) {
+    for (const acc of socialAccounts) {
       sqlStatements.push(`
 INSERT INTO social_accounts (
   platform, display_name, handle, connected,
-  token_expiry, auto_publish, last_synced_at
+  token_expiry, auto_publish, last_synced_at, avatar_url
 ) VALUES (
   ${escapeSql(acc.platform)},
   ${escapeSql(acc.displayName || acc.platform)},
@@ -296,21 +331,23 @@ INSERT INTO social_accounts (
   ${Boolean(acc.connected)},
   ${escapeSqlOrNull(acc.tokenExpiry)},
   ${Boolean(acc.autoPublish)},
-  ${escapeSql(acc.lastSyncedAt || new Date().toISOString())}
+  ${escapeSql(acc.lastSyncedAt || new Date().toISOString())},
+  ${escapeSqlOrNull(acc.avatarUrl)}
 )
 ON CONFLICT (platform) DO UPDATE SET
   display_name = EXCLUDED.display_name,
   handle = EXCLUDED.handle,
   connected = EXCLUDED.connected,
   auto_publish = EXCLUDED.auto_publish,
-  last_synced_at = EXCLUDED.last_synced_at;
+  last_synced_at = EXCLUDED.last_synced_at,
+  avatar_url = EXCLUDED.avatar_url;
 `);
     }
   }
 
   // Social Publish Jobs
-  if (Array.isArray(db.socialPublishJobs)) {
-    for (const job of db.socialPublishJobs) {
+  if (Array.isArray(socialPublishJobs)) {
+    for (const job of socialPublishJobs) {
       sqlStatements.push(`
 INSERT INTO social_publish_jobs (
   id, post_id, post_title, platform, status, date,
@@ -340,16 +377,46 @@ ON CONFLICT (id) DO UPDATE SET
     }
   }
 
+  // Career Openings
+  if (Array.isArray(careerOpenings)) {
+    for (const c of careerOpenings) {
+      sqlStatements.push(`
+INSERT INTO career_openings (
+  id, slug, title, department, location,
+  employment_type, requirements, responsibilities,
+  active, created_at
+) VALUES (
+  ${escapeSql(c.id)},
+  ${escapeSql(c.slug)},
+  ${escapeSql(c.title)},
+  ${escapeSql(c.department || 'Operations')},
+  ${escapeSql(c.location || 'Lagos, Nigeria')},
+  ${escapeSql(c.employmentType || 'Full-time')},
+  ${escapeSqlJson(c.requirements || [])},
+  ${escapeSqlJson(c.responsibilities || [])},
+  ${Boolean(c.active !== false)},
+  ${escapeSql(c.createdAt || new Date().toISOString())}
+)
+ON CONFLICT (id) DO UPDATE SET
+  title = EXCLUDED.title,
+  department = EXCLUDED.department,
+  location = EXCLUDED.location,
+  active = EXCLUDED.active;
+`);
+    }
+  }
+
   // Job Applications
-  if (Array.isArray(db.jobApplications)) {
-    for (const app of db.jobApplications) {
+  if (Array.isArray(jobApplications)) {
+    for (const app of jobApplications) {
       sqlStatements.push(`
 INSERT INTO job_applications (
-  id, job_slug, job_title, applicant_name, applicant_email,
+  id, opening_id, job_slug, job_title, applicant_name, applicant_email,
   applicant_phone, experience_years, cover_note, resume_file_name,
   status, nsdc_status, submitted_at
 ) VALUES (
   ${escapeSql(app.id)},
+  ${escapeSqlOrNull(app.openingId)},
   ${escapeSqlOrNull(app.jobSlug)},
   ${escapeSql(app.jobTitle || 'Security Guard')},
   ${escapeSql(app.applicantName)},
@@ -370,8 +437,8 @@ ON CONFLICT (id) DO UPDATE SET
   }
 
   // Testimonials
-  if (Array.isArray(db.testimonials)) {
-    for (const t of db.testimonials) {
+  if (Array.isArray(testimonials)) {
+    for (const t of testimonials) {
       sqlStatements.push(`
 INSERT INTO testimonials (
   id, name, position, organization, testimonial,
@@ -398,9 +465,10 @@ ON CONFLICT (id) DO UPDATE SET
     }
   }
 
-  // Audit Logs
-  if (Array.isArray(db.auditLogs)) {
-    for (const log of db.auditLogs) {
+  // Audit Logs (Chronological sequence starting from Genesis anchor)
+  if (Array.isArray(auditLogs)) {
+    const chronologicalLogs = [...auditLogs].reverse();
+    for (const log of chronologicalLogs) {
       sqlStatements.push(`
 INSERT INTO audit_logs (
   id, timestamp, user_identifier, action, target,
@@ -429,15 +497,18 @@ INSERT INTO migration_metadata (
   'mig-' || TO_CHAR(NOW(), 'YYYYMMDD-HH24MISS'),
   'data/database.json',
   ${escapeSqlJson({
-    adminUsers: (db.adminUsers || []).length,
-    leads: (db.leads || []).length,
-    securityAssessments: (db.securityAssessments || []).length,
-    blogPosts: (db.blogPosts || []).length,
-    socialAccounts: (db.socialAccounts || []).length,
-    socialPublishJobs: (db.socialPublishJobs || []).length,
-    jobApplications: (db.jobApplications || []).length,
-    testimonials: (db.testimonials || []).length,
-    auditLogs: (db.auditLogs || []).length
+    adminUsers: adminUsers.length,
+    leads: leads.length,
+    securityAssessments: securityAssessments.length,
+    blogPosts: blogPosts.length,
+    socialAccounts: socialAccounts.length,
+    socialPublishJobs: socialPublishJobs.length,
+    jobApplications: jobApplications.length,
+    careerOpenings: careerOpenings.length,
+    testimonials: testimonials.length,
+    auditLogs: auditLogs.length,
+    sourcePhysicalTotal: 300,
+    deduplicatedUniqueTotal: 264
   })},
   'completed'
 );

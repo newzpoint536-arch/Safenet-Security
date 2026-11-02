@@ -52,6 +52,28 @@ CREATE TABLE IF NOT EXISTS site_settings (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- DEDICATED RESTRICTED PUBLIC PROJECTION VIEW: public_site_settings
+-- Exposes ONLY approved branding, tagline, public contact numbers/emails, verified office addresses,
+-- public performance statistics, established year, approved public social URLs/handles, and last updated timestamp.
+-- All internal configuration (e.g., social_publishing_mode, administrative flags, future API keys or webhook secrets)
+-- remains strictly isolated and completely inaccessible to anon/authenticated client roles.
+CREATE OR REPLACE VIEW public_site_settings AS
+SELECT
+  id,
+  company_name,
+  tagline,
+  phone,
+  email,
+  whatsapp,
+  address_nigeria,
+  address_uk,
+  established_year,
+  stats,
+  social_links,
+  updated_at
+FROM site_settings
+WHERE id = 'current';
+
 -- 4. ADMINISTRATOR USERS TABLE
 CREATE TABLE IF NOT EXISTS admin_users (
   id VARCHAR(64) PRIMARY KEY,
@@ -191,13 +213,14 @@ CREATE TABLE IF NOT EXISTS social_accounts (
   connected BOOLEAN NOT NULL DEFAULT TRUE,
   token_expiry TIMESTAMPTZ,
   auto_publish BOOLEAN NOT NULL DEFAULT FALSE,
-  last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  avatar_url TEXT
 );
 
 -- 11. SOCIAL PUBLISH JOBS TABLE (Durable Outbox Queue)
 CREATE TABLE IF NOT EXISTS social_publish_jobs (
   id VARCHAR(64) PRIMARY KEY,
-  post_id VARCHAR(64) NOT NULL,
+  post_id VARCHAR(64) NOT NULL REFERENCES blog_posts(id) ON DELETE CASCADE,
   post_title VARCHAR(255) NOT NULL,
   platform VARCHAR(32) NOT NULL,
   status VARCHAR(32) NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'processing', 'published', 'failed', 'retrying')),
@@ -214,10 +237,26 @@ CREATE TABLE IF NOT EXISTS social_publish_jobs (
 CREATE INDEX IF NOT EXISTS idx_social_jobs_status ON social_publish_jobs(status);
 CREATE INDEX IF NOT EXISTS idx_social_jobs_idempotency ON social_publish_jobs(idempotency_key);
 CREATE INDEX IF NOT EXISTS idx_social_jobs_date ON social_publish_jobs(date DESC);
+CREATE INDEX IF NOT EXISTS idx_social_jobs_post_id ON social_publish_jobs(post_id);
 
--- 12. JOB APPLICATIONS TABLE (Careers Dossier)
+-- 12. CAREER OPENINGS TABLE
+CREATE TABLE IF NOT EXISTS career_openings (
+  id VARCHAR(64) PRIMARY KEY,
+  slug VARCHAR(128) UNIQUE NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  department VARCHAR(128) NOT NULL,
+  location VARCHAR(128) NOT NULL,
+  employment_type VARCHAR(64) NOT NULL DEFAULT 'Full-time',
+  requirements JSONB NOT NULL DEFAULT '[]'::jsonb,
+  responsibilities JSONB NOT NULL DEFAULT '[]'::jsonb,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 13. JOB APPLICATIONS TABLE (Careers Dossier)
 CREATE TABLE IF NOT EXISTS job_applications (
   id VARCHAR(64) PRIMARY KEY,
+  opening_id VARCHAR(64) REFERENCES career_openings(id) ON DELETE SET NULL,
   job_slug VARCHAR(128),
   job_title VARCHAR(255) NOT NULL,
   applicant_name VARCHAR(255) NOT NULL,
@@ -233,20 +272,7 @@ CREATE TABLE IF NOT EXISTS job_applications (
 
 CREATE INDEX IF NOT EXISTS idx_job_apps_status ON job_applications(status);
 CREATE INDEX IF NOT EXISTS idx_job_apps_submitted_at ON job_applications(submitted_at DESC);
-
--- 13. CAREER OPENINGS TABLE
-CREATE TABLE IF NOT EXISTS career_openings (
-  id VARCHAR(64) PRIMARY KEY,
-  slug VARCHAR(128) UNIQUE NOT NULL,
-  title VARCHAR(255) NOT NULL,
-  department VARCHAR(128) NOT NULL,
-  location VARCHAR(128) NOT NULL,
-  employment_type VARCHAR(64) NOT NULL DEFAULT 'Full-time',
-  requirements JSONB NOT NULL DEFAULT '[]'::jsonb,
-  responsibilities JSONB NOT NULL DEFAULT '[]'::jsonb,
-  active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+CREATE INDEX IF NOT EXISTS idx_job_apps_opening_id ON job_applications(opening_id);
 
 -- 14. TESTIMONIALS TABLE
 CREATE TABLE IF NOT EXISTS testimonials (
@@ -306,39 +332,127 @@ ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE migration_metadata ENABLE ROW LEVEL SECURITY;
 
--- Service Role (Render Backend) has full access to all tables
-DO $$ BEGIN
-  CREATE POLICY "Service Role full access on site_settings" ON site_settings FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on admin_users" ON admin_users FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on admin_sessions" ON admin_sessions FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on owner_recovery_state" ON owner_recovery_state FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on leads" ON leads FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on security_assessments" ON security_assessments FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on blog_posts" ON blog_posts FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on social_accounts" ON social_accounts FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on social_publish_jobs" ON social_publish_jobs FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on job_applications" ON job_applications FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on career_openings" ON career_openings FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on testimonials" ON testimonials FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on audit_logs" ON audit_logs FOR ALL TO service_role USING (true) WITH CHECK (true);
-  CREATE POLICY "Service Role full access on migration_metadata" ON migration_metadata FOR ALL TO service_role USING (true) WITH CHECK (true);
-EXCEPTION WHEN duplicate_object THEN null;
-END $$;
+-- ==============================================================================
+-- INDEPENDENTLY IDEMPOTENT SERVICE ROLE POLICIES (Backend Render Express Service)
+-- ==============================================================================
+-- Each policy is independently dropped and recreated so an existing policy
+-- never prevents other policies from being created or updated.
 
--- Public / Anonymous read-only policies for public marketing content
-DO $$ BEGIN
-  CREATE POLICY "Public read site_settings" ON site_settings FOR SELECT TO anon, authenticated USING (true);
-  CREATE POLICY "Public read published blog_posts" ON blog_posts FOR SELECT TO anon, authenticated USING (status = 'published');
-  CREATE POLICY "Public read published testimonials" ON testimonials FOR SELECT TO anon, authenticated USING (published = true);
-  CREATE POLICY "Public read active career_openings" ON career_openings FOR SELECT TO anon, authenticated USING (active = true);
-  CREATE POLICY "Public read social_accounts" ON social_accounts FOR SELECT TO anon, authenticated USING (true);
-EXCEPTION WHEN duplicate_object THEN null;
-END $$;
+DROP POLICY IF EXISTS "Service Role full access on site_settings" ON site_settings;
+CREATE POLICY "Service Role full access on site_settings" ON site_settings FOR ALL TO service_role USING (true) WITH CHECK (true);
 
--- Public / Anonymous insert-only for inquiries (when submitting directly without Render proxy)
-DO $$ BEGIN
-  CREATE POLICY "Public insert leads" ON leads FOR INSERT TO anon, authenticated WITH CHECK (true);
-  CREATE POLICY "Public insert security_assessments" ON security_assessments FOR INSERT TO anon, authenticated WITH CHECK (true);
-  CREATE POLICY "Public insert job_applications" ON job_applications FOR INSERT TO anon, authenticated WITH CHECK (true);
-EXCEPTION WHEN duplicate_object THEN null;
-END $$;
+DROP POLICY IF EXISTS "Service Role full access on admin_users" ON admin_users;
+CREATE POLICY "Service Role full access on admin_users" ON admin_users FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service Role full access on admin_sessions" ON admin_sessions;
+CREATE POLICY "Service Role full access on admin_sessions" ON admin_sessions FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service Role full access on owner_recovery_state" ON owner_recovery_state;
+CREATE POLICY "Service Role full access on owner_recovery_state" ON owner_recovery_state FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service Role full access on leads" ON leads;
+CREATE POLICY "Service Role full access on leads" ON leads FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service Role full access on security_assessments" ON security_assessments;
+CREATE POLICY "Service Role full access on security_assessments" ON security_assessments FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service Role full access on blog_posts" ON blog_posts;
+CREATE POLICY "Service Role full access on blog_posts" ON blog_posts FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service Role full access on social_accounts" ON social_accounts;
+CREATE POLICY "Service Role full access on social_accounts" ON social_accounts FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service Role full access on social_publish_jobs" ON social_publish_jobs;
+CREATE POLICY "Service Role full access on social_publish_jobs" ON social_publish_jobs FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service Role full access on job_applications" ON job_applications;
+CREATE POLICY "Service Role full access on job_applications" ON job_applications FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service Role full access on career_openings" ON career_openings;
+CREATE POLICY "Service Role full access on career_openings" ON career_openings FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service Role full access on testimonials" ON testimonials;
+CREATE POLICY "Service Role full access on testimonials" ON testimonials FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service Role full access on audit_logs" ON audit_logs;
+CREATE POLICY "Service Role full access on audit_logs" ON audit_logs FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service Role full access on migration_metadata" ON migration_metadata;
+CREATE POLICY "Service Role full access on migration_metadata" ON migration_metadata FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ==============================================================================
+-- INDEPENDENTLY IDEMPOTENT PUBLIC READ POLICIES (Approved Marketing Content ONLY)
+-- ==============================================================================
+-- Direct client access to site_settings table is fully revoked; approved public
+-- configuration is projected exclusively through the dedicated public_site_settings view.
+-- Direct client access to CRM leads, assessments, job applications, social accounts,
+-- user credentials, recovery state, and audit logs is strictly blocked.
+
+-- Cleanup legacy or broad policies if present
+DROP POLICY IF EXISTS "Public read site_settings" ON site_settings;
+DROP POLICY IF EXISTS "Public insert leads" ON leads;
+DROP POLICY IF EXISTS "Public insert security_assessments" ON security_assessments;
+DROP POLICY IF EXISTS "Public insert job_applications" ON job_applications;
+DROP POLICY IF EXISTS "Public read social_accounts" ON social_accounts;
+
+-- Independent public read policies
+DROP POLICY IF EXISTS "Public read published blog_posts" ON blog_posts;
+CREATE POLICY "Public read published blog_posts" ON blog_posts FOR SELECT TO anon, authenticated USING (status = 'published');
+
+DROP POLICY IF EXISTS "Public read published testimonials" ON testimonials;
+CREATE POLICY "Public read published testimonials" ON testimonials FOR SELECT TO anon, authenticated USING (published = true);
+
+DROP POLICY IF EXISTS "Public read active career_openings" ON career_openings;
+CREATE POLICY "Public read active career_openings" ON career_openings FOR SELECT TO anon, authenticated USING (active = true);
+
+-- ==============================================================================
+-- LEAST-PRIVILEGE ROLE PERMISSIONS (No blanket schema grants)
+-- ==============================================================================
+
+-- 1. Schema Usage (Explicit schema navigation for defined roles)
+GRANT USAGE ON SCHEMA public TO service_role, anon, authenticated;
+
+-- 2. Explicitly revoke ALL direct privileges on all 14 underlying tables from client roles (anon, authenticated)
+REVOKE ALL ON TABLE
+  site_settings,
+  admin_users,
+  admin_sessions,
+  owner_recovery_state,
+  leads,
+  security_assessments,
+  blog_posts,
+  social_accounts,
+  social_publish_jobs,
+  job_applications,
+  career_openings,
+  testimonials,
+  audit_logs,
+  migration_metadata
+FROM anon, authenticated;
+
+-- 2. Explicitly grant SELECT ONLY on approved public marketing tables and the restricted public view
+GRANT SELECT ON TABLE blog_posts, testimonials, career_openings TO anon, authenticated;
+GRANT SELECT ON TABLE public_site_settings TO anon, authenticated;
+
+-- 3. Explicitly grant required backend privileges ONLY on the 14 SafeNet tables and public view to service_role
+-- (No blanket ALL TABLES or ALL SEQUENCES in public schema)
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+  site_settings,
+  admin_users,
+  admin_sessions,
+  owner_recovery_state,
+  leads,
+  security_assessments,
+  blog_posts,
+  social_accounts,
+  social_publish_jobs,
+  job_applications,
+  career_openings,
+  testimonials,
+  audit_logs,
+  migration_metadata
+TO service_role;
+
+GRANT SELECT ON TABLE public_site_settings TO service_role;
+
+

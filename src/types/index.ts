@@ -194,6 +194,7 @@ export interface CareerOpening {
 
 export interface JobApplication {
   id: string;
+  openingId?: string;
   jobSlug: string;
   jobTitle: string;
   applicantName: string;

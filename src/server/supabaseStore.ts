@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import crypto from 'node:crypto';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import pg from 'pg';
 import { 
@@ -33,6 +34,37 @@ const DATABASE_URL = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_U
 export const isSupabaseConfigured = Boolean(
   (SUPABASE_URL && SUPABASE_SERVICE_KEY) || DATABASE_URL
 );
+
+// ==========================================
+// AUDIT LEDGER HMAC SECRET RESOLUTION
+// ==========================================
+// HISTORICAL TRANSITION & KEY COMPROMISE DOCUMENTATION:
+// The legacy key 'safenet-audit-integrity-chain-key-v1' is COMPROMISED and PERMANENTLY REVOKED.
+// It must NEVER be used to sign any new audit entries.
+// In production (NODE_ENV === 'production'): AUDIT_HMAC_SECRET is strictly mandatory (>= 32 characters).
+// Fails closed if missing or invalid.
+// In development: No fallback to the compromised key is permitted.
+export function getAuditHmacSecret(): string | null {
+  const secret = process.env.AUDIT_HMAC_SECRET?.trim() || '';
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (isProduction) {
+    if (!secret || secret.length < 32) {
+      throw new Error(
+        '[FATAL SECURITY CONFIGURATION] Missing or insufficient AUDIT_HMAC_SECRET in production. ' +
+        'A fresh cryptographically secure secret (minimum 32 characters / 256 bits) must be configured.'
+      );
+    }
+    return secret;
+  }
+
+  if (!secret || secret.length < 32) {
+    return null;
+  }
+  return secret;
+}
+
+const AUDIT_LOCK_ID = 742369; // PostgreSQL 64-bit advisory transaction lock key for audit HMAC chaining
 
 let supabaseClient: SupabaseClient | null = null;
 let pgPool: pg.Pool | null = null;
@@ -242,6 +274,30 @@ export async function saveAdminUsers(users: AdminUserRecord[]): Promise<void> {
 // ==============================================================================
 
 export async function getOwnerRecoveryState(): Promise<any> {
+  if (pgPool) {
+    try {
+      const res = await pgPool.query('SELECT * FROM owner_recovery_state WHERE id = $1', ['primary']);
+      if (res.rows.length > 0) {
+        const row = res.rows[0];
+        return {
+          ownerRecoveryDisabled: Boolean(row.owner_recovery_disabled),
+          ownerRecoveryDisabledAt: row.owner_recovery_disabled_at,
+          ownerRecoveryDisabledReason: row.owner_recovery_disabled_reason,
+          recoverySecretHash: row.recovery_secret_hash,
+          recoverySecretSalt: row.recovery_secret_salt,
+          recoverySecretIterations: row.recovery_secret_iterations,
+          invalidatedSecretHashes: Array.isArray(row.invalidated_secret_hashes)
+            ? row.invalidated_secret_hashes
+            : typeof row.invalidated_secret_hashes === 'string'
+              ? JSON.parse(row.invalidated_secret_hashes)
+              : []
+        };
+      }
+    } catch (err: any) {
+      console.warn('[SafeNet DB] PostgreSQL pool query for owner_recovery_state notice:', err.message);
+    }
+  }
+
   if (supabaseClient) {
     try {
       const { data, error } = await supabaseClient
@@ -269,6 +325,41 @@ export async function getOwnerRecoveryState(): Promise<any> {
 }
 
 export async function saveOwnerRecoveryState(state: any): Promise<void> {
+  if (pgPool) {
+    try {
+      await pgPool.query(`
+        INSERT INTO owner_recovery_state (
+          id, owner_recovery_disabled, owner_recovery_disabled_at,
+          owner_recovery_disabled_reason, recovery_secret_hash,
+          recovery_secret_salt, recovery_secret_iterations,
+          invalidated_secret_hashes, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          owner_recovery_disabled = EXCLUDED.owner_recovery_disabled,
+          owner_recovery_disabled_at = EXCLUDED.owner_recovery_disabled_at,
+          owner_recovery_disabled_reason = EXCLUDED.owner_recovery_disabled_reason,
+          recovery_secret_hash = EXCLUDED.recovery_secret_hash,
+          recovery_secret_salt = EXCLUDED.recovery_secret_salt,
+          recovery_secret_iterations = EXCLUDED.recovery_secret_iterations,
+          invalidated_secret_hashes = EXCLUDED.invalidated_secret_hashes,
+          updated_at = NOW();
+      `, [
+        'primary',
+        Boolean(state.ownerRecoveryDisabled),
+        state.ownerRecoveryDisabledAt || null,
+        state.ownerRecoveryDisabledReason || null,
+        state.recoverySecretHash || null,
+        state.recoverySecretSalt || null,
+        state.recoverySecretIterations || null,
+        JSON.stringify(state.invalidatedSecretHashes || [])
+      ]);
+    } catch (err: any) {
+      console.warn('[SafeNet DB] PostgreSQL pool update for owner_recovery_state notice:', err.message);
+    }
+  }
+
   if (supabaseClient) {
     try {
       await supabaseClient.from('owner_recovery_state').upsert({
@@ -454,6 +545,7 @@ export async function createJobApplication(app: any): Promise<any> {
     try {
       await supabaseClient.from('job_applications').upsert({
         id: app.id,
+        opening_id: app.openingId || null,
         job_slug: app.jobSlug || null,
         job_title: app.jobTitle || 'Security Guard',
         applicant_name: app.applicantName,
@@ -482,7 +574,47 @@ export async function createJobApplication(app: any): Promise<any> {
 // ==============================================================================
 
 export async function recordAuditLog(log: AuditLog): Promise<AuditLog> {
-  if (supabaseClient) {
+  // If direct PostgreSQL pool is active, serialize writes using transaction-level advisory locking
+  if (pgPool) {
+    let client: pg.PoolClient | null = null;
+    try {
+      client = await pgPool.connect();
+      await client.query('BEGIN');
+      // Hold transaction-level advisory lock (released automatically on COMMIT/ROLLBACK)
+      await client.query('SELECT pg_advisory_xact_lock($1)', [AUDIT_LOCK_ID]);
+
+      // Read newest audit record hash to ensure uninterrupted cryptographic HMAC chaining
+      const latestRes = await client.query('SELECT hash FROM audit_logs ORDER BY timestamp DESC, id DESC LIMIT 1');
+      const prevHash = latestRes.rows[0]?.hash || log.prevHash || 'GENESIS-SAFENET-SECURE-ANCHOR-000';
+
+      // Compute tamper-evident HMAC
+      const logPayload = `${prevHash}:${log.id}:${log.timestamp}:${log.user}:${log.action}:${log.target}:${log.details}:${log.ip}`;
+      const hmacSecret = getAuditHmacSecret();
+      let hash: string;
+      if (hmacSecret) {
+        hash = crypto.createHmac('sha256', hmacSecret).update(logPayload).digest('hex');
+      } else {
+        hash = log.hash || `DEV-UNSIGNED-${crypto.createHash('sha256').update(logPayload).digest('hex').substring(0, 16)}`;
+      }
+
+      await client.query(`
+        INSERT INTO audit_logs (id, timestamp, user_identifier, action, target, details, ip, hash, prev_hash)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (id) DO NOTHING
+      `, [log.id, log.timestamp || new Date().toISOString(), log.user, log.action, log.target, log.details, log.ip, hash, prevHash]);
+
+      await client.query('COMMIT');
+      log.hash = hash;
+      log.prevHash = prevHash;
+    } catch (pgErr) {
+      if (client) {
+        try { await client.query('ROLLBACK'); } catch {}
+      }
+      console.warn('[SafeNet DB] Advisory-locked audit write failed, falling back:', pgErr);
+    } finally {
+      if (client) client.release();
+    }
+  } else if (supabaseClient) {
     try {
       await supabaseClient.from('audit_logs').upsert({
         id: log.id,
@@ -519,8 +651,7 @@ export async function getFullState(isAdmin = false): Promise<any> {
       siteSettings: normalizeDbSiteSettings(jsonDb.siteSettings),
       blogPosts: (jsonDb.blogPosts || []).filter((b: any) => b.status === 'published'),
       testimonials: (jsonDb.testimonials || []).filter((t: any) => t.published !== false),
-      careerOpenings: (jsonDb.careerOpenings || []).filter((c: any) => c.active !== false),
-      socialAccounts: jsonDb.socialAccounts || []
+      careerOpenings: (jsonDb.careerOpenings || []).filter((c: any) => c.active !== false)
     };
   }
 
