@@ -1150,6 +1150,17 @@
   ],
   "jobApplications": [
     {
+      "id": "app-test-idempotency-1793710992513",
+      "jobSlug": "lead-armed-officer",
+      "jobTitle": "Lead Armed Security Officer",
+      "applicantName": "Tunde Adeyemi",
+      "applicantEmail": "tunde.adeyemi@example.com",
+      "applicantPhone": "+234 802 000 1122",
+      "status": "interviewed",
+      "nsdcStatus": "certified_grade_a",
+      "submittedAt": "2026-11-03T13:03:12.513Z"
+    },
+    {
       "id": "app-1793116390603-2078",
       "submittedAt": "2026-10-27T15:53:10.603Z",
       "status": "pending",
@@ -3534,45 +3545,11 @@
     }
   ],
   "securityState": {
-    "ownerRecoveryDisabled": true,
-    "ownerRecoveryDisabledAt": "2026-10-27T15:53:09.755Z",
-    "ownerRecoveryDisabledReason": "Owner recovery successfully executed and permanently disabled.",
-    "invalidatedSecretHashes": [
-      "e76c0fa479a69a997bf2471eda535fc217ab94c5166432b5b25344440b0acdbc",
-      "46284fb269b2a48900e9e43be0ad8caf157847c277d37dc0a51637fec99ab279",
-      "96f26daff167847a897be23fc477a511ac87dfab587e52963511c291611a3e64",
-      "a3d6dbf72a3079b9aa8af413d8f1c2d1966ea6c38c4346c22e1a838d4062eb94",
-      "dca4a8aabe9488d792e6c074c864849d1140e87195724e85d198a8f6b68af2ab",
-      "50a0284f797d6ab5eb651aa34f66ac94e3295a784b1d47848b03410f97b28e20",
-      "df881195ce24477895c20e8c532196024dffc3e18d78568206c82084db5d478e",
-      "c2f24374074922d8643637c35c0b28fc83f4d8939df95d34d2d1ec5c9f8f73c1",
-      "f4153045513936beb60a741f5044fb70a9b0f2bf41adc9d235d2393f746fc422",
-      "9770503c7d27278502851a9deefcd359101db9b35d4a1d5ee85c0dd38d26780b",
-      "4c6664975c1a17b1a005a3c4460c3105d367893b94f9c6ed1559308e30431c56",
-      "4bff956ee67c3fa45aebb9b40c7134b9e111bf8cb76e15f4dd74a21de44e9cae",
-      "12a2ec8a102fdcd6d0a46a1a6f4a86d239da895aef9345c2574e393fefac6380",
-      "e1d151c0e9033a9fda231ae7f2d72b2595a0037a908493e3add47d41c124a8d7",
-      "d34fe3fba029a8d58af51e1bea07d03fba1340ee89e11c81cd2e4034c5850cd8",
-      "4894a55c8c0776ced8e285dc52ddfca54e3090ff6eeb602d90f632a8c3aaf0a5",
-      "d2e0886d41b65240e5a68e5e2012d7f6ee8764b0474f29ead63293e70acaf54f",
-      "94ba78ecbabd2ce0c8e744a63ec84ca9de35439c23358164291db5a4c020e9ff",
-      "2fc4125e4ae536fdb727c02141dbdaf0175ca2da42cbfd171bf3e70a92256a2a",
-      "bf18b1df31593851f5ffaa762ab222817f2715eb83cda071a738f06864498fa3",
-      "ffb95393871af74b024509bd2d05957f6d9515e8f6ca7abc4386b8d67d75c8d4",
-      "2fe1c0207eac08696717d3c8474899180c77b36539db8fdd8fd438dbaf80d44d",
-      "702219a24d0b05ab7231a9e129f4719fc6af4510e3d6e60c20f7b96febdfdffa",
-      "97e3ac01c5db49edddc359a5bf979d3eaad92923d81a9c4f3e9036845c1c7261",
-      "50cadc6d3f8bd3a446784ef75bc3e2a3ac0e8fd79ed43a196b09942eb8b049b1",
-      "ffb45c3f0703cff0acecdd3fde9dd24dfc238af6a387d04f27d495faa23ac888",
-      "3d4276e189c88adb6ea5fded4cf4b7ac705181201594b5c6fe2a99d24f7748ff",
-      "d65f0a7dd9971800814d6daa4c1b23601992d0892bef5e3df547a1a007d513b1",
-      "14fa0c1777885894bab25d2fd841038af99a9f9795a7e7f9ab9594859b7e48f4",
-      "859596e27c3870e16d16eb753bec767c37a7eef8ccac08aafaa9b40790f424e1",
-      "af9023b3aa6478ce1129836f128119d7382a7ec97a1bca150bfd768da939355c",
-      "3aea20e51dd91e38d31ef496a8414765f8688c952d7ec39b3907dc18c1a0bd16",
-      "d2e9ee100931253887d989a687dd4b65d02c67243267816a755146c46c23120d",
-      "713a5cdc890d82bb26f49427a38c4ac7aa63a435e5d5fb2264da8e833fbfc3dd"
-    ]
+    "expectedVersion": 1,
+    "ownerRecoveryDisabled": false,
+    "recoverySecretHash": "test-hash-2c12",
+    "invalidatedSecretHashes": [],
+    "version": 2
   },
-  "updatedAt": "2026-10-27T15:53:10.623Z"
+  "updatedAt": "2026-11-03T16:36:37.913Z"
 }

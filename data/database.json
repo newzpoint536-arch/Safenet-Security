@@ -1150,6 +1150,17 @@
   ],
   "jobApplications": [
     {
+      "id": "app-test-idempotency-1793710992513",
+      "jobSlug": "lead-armed-officer",
+      "jobTitle": "Lead Armed Security Officer",
+      "applicantName": "Tunde Adeyemi",
+      "applicantEmail": "tunde.adeyemi@example.com",
+      "applicantPhone": "+234 802 000 1122",
+      "status": "interviewed",
+      "nsdcStatus": "certified_grade_a",
+      "submittedAt": "2026-11-03T13:03:12.513Z"
+    },
+    {
       "id": "app-1793116390603-2078",
       "submittedAt": "2026-10-27T15:53:10.603Z",
       "status": "pending",
@@ -3575,5 +3586,5 @@
       "713a5cdc890d82bb26f49427a38c4ac7aa63a435e5d5fb2264da8e833fbfc3dd"
     ]
   },
-  "updatedAt": "2026-10-27T15:53:19.675Z"
+  "updatedAt": "2026-11-03T13:03:12.522Z"
 }
