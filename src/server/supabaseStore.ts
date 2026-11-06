@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,10 +39,15 @@ const __dirname = path.dirname(__filename);
 // Privileged backend routines must NEVER use VITE_ variables or unvalidated aliases.
 const SUPABASE_URL = process.env.SUPABASE_URL?.trim() || '';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || '';
+const SUPABASE_PUBLISHABLE_KEY = (process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY)?.trim() || '';
 const DATABASE_URL = process.env.DATABASE_URL?.trim() || '';
 
 export const isSupabaseConfigured = Boolean(
   DATABASE_URL || (SUPABASE_URL && SUPABASE_SERVICE_KEY)
+);
+
+export const isSupabasePublicConfigured = Boolean(
+  SUPABASE_URL && (SUPABASE_PUBLISHABLE_KEY || SUPABASE_SERVICE_KEY)
 );
 
 // PostgreSQL 64-bit advisory transaction lock key for audit HMAC chaining
@@ -81,6 +89,7 @@ export function getAuditHmacSecret(): string | null {
 
 // Client singletons
 let supabaseClient: SupabaseClient | null = null;
+let publicSupabaseClient: SupabaseClient | null = null;
 let pgPool: pg.Pool | null = null;
 
 if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
@@ -89,7 +98,18 @@ if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
       auth: { persistSession: false, autoRefreshToken: false }
     });
   } catch (err: any) {
-    console.warn('[SafeNet Supabase] Initialization notice:', err?.message || err);
+    console.warn('[SafeNet Supabase] Privileged client initialization notice:', err?.message || err);
+  }
+}
+
+// Public client for RLS-permitted public queries (site_settings view, published blog posts, etc.)
+if (SUPABASE_URL && (SUPABASE_PUBLISHABLE_KEY || SUPABASE_SERVICE_KEY)) {
+  try {
+    publicSupabaseClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY || SUPABASE_SERVICE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+  } catch (err: any) {
+    console.warn('[SafeNet Supabase] Public client initialization notice:', err?.message || err);
   }
 }
 
@@ -206,6 +226,35 @@ export async function checkDatabaseConnectivity(): Promise<{
       latencyMs: Date.now() - start,
       details: 'Authoritative database credentials configured but clients failed to initialize.'
     };
+  }
+
+  // Probe public client if configured with publishable key
+  if (publicSupabaseClient) {
+    try {
+      // Test permitted public endpoint under RLS (e.g. published blog_posts or testimonials)
+      const { error } = await publicSupabaseClient.from('blog_posts').select('id').limit(1);
+      if (!error) {
+        return {
+          connected: true,
+          provider: 'supabase',
+          latencyMs: Date.now() - start,
+          details: 'Supabase client REST connection verified with publishable key (public read access active). Privileged operations require SUPABASE_SERVICE_ROLE_KEY or DATABASE_URL.'
+        };
+      }
+      return {
+        connected: false,
+        provider: 'supabase',
+        latencyMs: Date.now() - start,
+        details: `Supabase client publishable REST probe failed: ${error.message}`
+      };
+    } catch (err: any) {
+      return {
+        connected: false,
+        provider: 'supabase',
+        latencyMs: Date.now() - start,
+        details: `Supabase client publishable probe exception: ${err.message}`
+      };
+    }
   }
 
   // Graceful local persistence fallback (explicitly unconfigured mode)
@@ -423,6 +472,34 @@ export async function getPublicSiteSettings(): Promise<Partial<SiteSettings>> {
     }
 
     throw new Error('[SafeNet DB:getPublicSiteSettings] Authoritative DB client unavailable.');
+  }
+
+  // Public client projection query if configured with publishable key
+  if (publicSupabaseClient) {
+    try {
+      const { data, error } = await publicSupabaseClient
+        .from('public_site_settings')
+        .select('*')
+        .eq('id', 'current')
+        .maybeSingle();
+
+      if (!error && data) {
+        return {
+          companyName: data.company_name,
+          tagline: data.tagline,
+          phone: data.phone,
+          email: data.email,
+          whatsapp: data.whatsapp,
+          addressNigeria: data.address_nigeria,
+          addressUK: data.address_uk,
+          establishedYear: data.established_year,
+          stats: safeJsonParse(data.stats, DEFAULT_SITE_SETTINGS.stats),
+          socialLinks: safeJsonParse(data.social_links, DEFAULT_SITE_SETTINGS.socialLinks)
+        };
+      }
+    } catch {
+      // Graceful fallback to local sanitized site settings
+    }
   }
 
   // Local development mode projection (strictly sanitized public fields only)
@@ -1608,6 +1685,41 @@ export async function getBlogPosts(statusFilter: 'published' | 'draft' | 'all' =
     throw new Error('[SafeNet DB:getBlogPosts] Authoritative DB client unavailable.');
   }
 
+  // Public client query for published posts when publishable key is configured
+  if (statusFilter === 'published' && publicSupabaseClient) {
+    try {
+      const { data, error } = await publicSupabaseClient
+        .from('blog_posts')
+        .select('*')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data.map(row => ({
+          id: row.id,
+          slug: row.slug,
+          title: row.title,
+          excerpt: row.excerpt,
+          content: row.content,
+          featuredImage: row.featured_image || '',
+          author: safeJsonParse(row.author, { name: 'SafeNet Editorial Team', role: 'Security Intelligence Group' }),
+          category: row.category,
+          tags: safeArray<string>(row.tags),
+          publishedAt: row.published_at,
+          updatedAt: row.updated_at,
+          readingTime: row.reading_time || '4 min read',
+          status: row.status,
+          seoTitle: row.seo_title || '',
+          seoDescription: row.seo_description || '',
+          relatedServices: safeArray<string>(row.related_services),
+          views: row.views || 0
+        }));
+      }
+    } catch {
+      // Fallback to local store
+    }
+  }
+
   const jsonDb = readJsonDatabase();
   const posts = Array.isArray(jsonDb?.blogPosts) ? jsonDb.blogPosts : [];
   if (statusFilter === 'all') return posts;
@@ -2415,6 +2527,33 @@ export async function getCareerOpenings(activeOnly = false): Promise<CareerOpeni
     throw new Error('[SafeNet DB:getCareerOpenings] Authoritative DB client unavailable.');
   }
 
+  // Public client query for active openings when publishable key is configured
+  if (activeOnly && publicSupabaseClient) {
+    try {
+      const { data, error } = await publicSupabaseClient
+        .from('career_openings')
+        .select('*')
+        .eq('active', true)
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data.map(row => ({
+          id: row.id,
+          slug: row.slug,
+          title: row.title,
+          department: row.department,
+          location: row.location,
+          employmentType: row.employment_type || 'Full-time',
+          requirements: safeArray<string>(row.requirements),
+          responsibilities: safeArray<string>(row.responsibilities),
+          active: Boolean(row.active)
+        }));
+      }
+    } catch {
+      // Fallback to local store
+    }
+  }
+
   const jsonDb = readJsonDatabase();
   const openings = Array.isArray(jsonDb?.careerOpenings) ? jsonDb.careerOpenings : [];
   if (activeOnly) return openings.filter(o => o.active !== false);
@@ -2814,6 +2953,32 @@ export async function getTestimonials(publishedOnly = false): Promise<Testimonia
     }
 
     throw new Error('[SafeNet DB:getTestimonials] Authoritative DB client unavailable.');
+  }
+
+  // Public client query for published testimonials when publishable key is configured
+  if (publishedOnly && publicSupabaseClient) {
+    try {
+      const { data, error } = await publicSupabaseClient
+        .from('testimonials')
+        .select('*')
+        .eq('published', true)
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data.map(row => ({
+          id: row.id,
+          name: row.name,
+          position: row.position,
+          organization: row.organization,
+          testimonial: row.testimonial,
+          rating: row.rating || 5,
+          published: Boolean(row.published),
+          location: row.location
+        }));
+      }
+    } catch {
+      // Fallback to local store
+    }
   }
 
   const jsonDb = readJsonDatabase();
